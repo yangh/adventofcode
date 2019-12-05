@@ -36,14 +36,15 @@
         [else
          (displayln (format "Unknown opcode: ~a" (vector-ref ints pos)))]))))
 
-(define test1 "1,9,10,3,2,3,11,0,99,30,40,50")
-(intcode (input->vector test1) 0)
-
 (define (p1202 in n1 n2)
   (vector-set! in 1 n1)
   (vector-set! in 2 n2)
   (intcode in 0)
   (vector-ref in 0))
+
+; Unit test
+(define test1 "1,9,10,3,2,3,11,0,99,30,40,50")
+(p1202 (input->vector test1) 9 10)
 
 ; Part 1
 (p1202 (input->vector input) 12 2)
