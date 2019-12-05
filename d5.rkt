@@ -7,15 +7,16 @@
    (map string-trim
         (string-split input ","))))
 
-;(displayln (format "Code length: ~a" (vector-length ins)))
-
+; Immediate mode parameter
 (define (number-at ints pos)
   (string->number
    (vector-ref ints pos)))
 
+; Position mode parameter, var
 (define (value-at ints pos)
   (number-at ints (number-at ints pos)))
 
+; Load parameters in 0/1 mode
 (define (load-param ints op pos nth)
   (if (or
        ; No mode in opcode, Position mode as default
@@ -25,26 +26,33 @@
       (value-at ints (+ pos nth))
       ; 1 - Immediate mode
       (number-at ints (+ pos nth))))
-      
+
+; add/mul src1 src2 dist
 (define (op12 func ints pos)
   (let* ([op (vector-ref ints pos)]
          [n1 (load-param ints op pos 1)]
          [n2 (load-param ints op pos 2)]
          [n3 (number-at ints (+ pos 3))])
     (displayln (format "OP: ~a ~a ~a ~a" op n1 n2 n3))
-    (vector-set! ints n3 (format "~a" (func n1 n2)))))
+    (vector-set! ints n3 (format "~a" (func n1 n2))))
+  ; Forward
+  (intcode ints (+ pos 4)))
 
 (define (value-set! ints pos value)
   (displayln (format "Set: ~a ~a" pos value))
   (vector-set! ints pos value))
 
+; store dst <input>
 (define (op3 ints pos value)
-  (value-set! ints (number-at ints (+ pos 1)) value))
+  (value-set! ints (number-at ints (+ pos 1)) value)
+  (intcode ints (+ pos 2)))
 
+; output src
 (define (op4 ints pos)
   (let* ([op (vector-ref ints pos)]
          [n1 (load-param ints op pos 1)])
-    (displayln (format "op4: ~a" n1))))
+    (displayln (format "op4: ~a" n1)))
+  (intcode ints (+ pos 2)))
 
 ; jump-if-ture/false
 (define (jmp-if cond ints pos)
@@ -56,9 +64,11 @@
 
 (define ne? (lambda (n1 n2) (not (= n1 n2))))
 
+; jump to n2 if n1 != 0
 (define (op5 ints pos)
   (jmp-if ne? ints pos))
 
+; jump to n2 if n1 == 0
 (define (op6 ints pos)
   (jmp-if = ints pos))
 
@@ -76,9 +86,11 @@
     (displayln (format "cmp-if: ~a ~a" n1 n2))
     (cond n1 n2)))
 
+; cmp, set n3 = (n1 < n2) ? 1 : 0
 (define (op7 ints pos)
   (cmp-if < ints pos))
 
+; cmp, set n3 = (n1 == n2) ? 1 : 0
 (define (op8 ints pos)
   (cmp-if = ints pos))
 
@@ -90,9 +102,13 @@
 
 (define system-id "1")
 
+; check op: ABCDE
+;    DE: op
+;    ABC: parameter mode, 0 - position, 1 - immediate
 (define (is-op? op code)
   (char=? (last (string->list op)) code))
 
+; Intcode computer
 (define (intcode ints pos)
   (when (< pos (vector-length ints))
     (let ([op (vector-ref ints pos)])
@@ -100,29 +116,15 @@
       (displayln (format "pos: ~a" pos))
       (displayln (format "opc: ~a" op))
       (cond
-        [(string=? op "99")
-         ;(displayln ints)
-         #f]
-        [(is-op? op #\1)
-         (op12 + ints pos)
-         (intcode ints (+ pos 4))]
-        [(is-op? op #\2)
-         (op12 * ints pos)
-         (intcode ints (+ pos 4))]
-        [(string=? op "3")
-         (op3 ints pos system-id)
-         (intcode ints (+ pos 2))]
-        [(is-op? op #\4)
-         (op4 ints pos)
-         (intcode ints (+ pos 2))]
-        [(is-op? op #\5)
-         (jmp-op ints pos op5)]
-        [(is-op? op #\6)
-         (jmp-op ints pos op6)]
-        [(is-op? op #\7)
-         (cmp-op ints pos op7)]
-        [(is-op? op #\8)
-         (cmp-op ints pos op8)]
+        [(is-op? op #\1) (op12 + ints pos)]
+        [(is-op? op #\2) (op12 * ints pos)]
+        [(is-op? op #\3) (op3 ints pos system-id)]
+        [(is-op? op #\4) (op4 ints pos)]
+        [(is-op? op #\5) (jmp-op ints pos op5)]
+        [(is-op? op #\6) (jmp-op ints pos op6)]
+        [(is-op? op #\7) (cmp-op ints pos op7)]
+        [(is-op? op #\8) (cmp-op ints pos op8)]
+        [(string=? op "99") #f] ; Halt
         [else
          (displayln (format "Unknown opcode: ~a" (vector-ref ints pos)))]))))
 
