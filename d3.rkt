@@ -80,7 +80,13 @@
         [y (if (= (p-y1 p1) (p-y2 p1))
                (p-y1 p1)
                (p-y1 p2))])
-    (+ (abs x) (abs y))))
+    (values (+ (abs x) (abs y)) x y)))
+
+(define (p-to-joint-dist p x y)
+  (abs
+   (if (= x (p-x1 p))
+       (- y (p-y1 p))
+       (- x (p-x1 p)))))
 
 (define (paths-dump paths)
   (for-each
@@ -99,25 +105,35 @@
   (paths-dump paths-2)
 
   (define min-dist 1000000)
+  (define min-plen 1000000)
 
+  (define path-len-1 0)
+  (define path-len-2 0)
   (for ([p paths-1])
+    (set! path-len-2 0) ; reset
     (for ([q paths-2])
+      ;(displayln (format "plen: ~a ~a" path-len-1 path-len-2))
       (when (path-intersects? p q)
-        (let ([d (manhattan-distance p q)])
-          (displayln
-           (format "Cross: ~a ~a, ~a" (format-p p) (format-p q) d))
+        (let*-values ([(d x y) (manhattan-distance p q)]
+                      [(plen) (+ path-len-1 path-len-2
+                                (p-to-joint-dist p x y)
+                                (p-to-joint-dist q x y))])
+          (displayln (format "Cross: ~a ~a, mdist: ~a, path-len: ~a"
+                             (format-p p) (format-p q) d plen))
           (when (> d 0)
             (when (< d min-dist)
-              (set! min-dist d)))))))
-  (displayln (format "Nearest distance: ~a" min-dist)))
+              (set! min-dist d)))
+          (when (< plen min-plen)
+            (set! min-plen plen))))
+      (set! path-len-2 (+ path-len-2 (p-dist q))))
+    (set! path-len-1 (+ path-len-1 (p-dist p))))
+  (displayln (format "Nearest distance: ~a" min-dist))
+  (displayln (format "Mini path distance: ~a" min-plen)))
 
-(find-nearest-m-dist "R75,D30,R83,U83,L12,D49,R71,U7,L72"
-                     "U62,R66,U55,R34,D71,R55,D58,R83")
-
-(find-nearest-m-dist "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51"
-                     "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")
+;(find-nearest-m-dist "R75,D30,R83,U83,L12,D49,R71,U7,L72" "U62,R66,U55,R34,D71,R55,D58,R83")
+;(find-nearest-m-dist "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51" "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")
 
 (find-nearest-m-dist "R8,U5,L5,D3" "U7,R6,D4,L4")
 
-; Part 1
+; Part 1/2
 (find-nearest-m-dist input-1 input-2)
