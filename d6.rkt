@@ -2,7 +2,7 @@
 
 (require "input.rkt")
 
-(define input (input-load-lines 'd6))
+(define input (input-load-lines 6))
 
 (struct planet (name parent orbith count) #:mutable)
 
