@@ -1,5 +1,8 @@
 #lang racket
 
+; https://adventofcode.com/2019/day/2
+; https://adventofcode.com/2019/day/5
+
 (struct opcode (name idx psize mcode))
 
 (define Intcode%
@@ -22,27 +25,27 @@
     ; ABC[DE], DE is the code
     (define (load-intr)
       (let* ([code (vector-ref codev pc)]
-             [len (string-length code)])
+             [len  (string-length code)])
         (set! intr (string-append (make-string (- 5 len) #\0) code))
-        (set! int (string->number (substring intr 3 5)))))
+        (set! int  (string->number (substring intr 3 5)))))
     
     ; Immediate mode parameter
-    (define (number-at ints pos)
-      (string->number (vector-ref ints pos)))
+    (define (number-at pos)
+      (string->number (vector-ref codev pos)))
 
     ; Load parameters in 0/1 mode
-    (define (load-parameter ints op pos nth)
-      (if (char=? #\0 (string-ref op (- 3 nth)))
-          (number-at ints (number-at ints (+ pos nth)))
-          (number-at ints (+ pos nth))))
+    (define (load-parameter nth)
+      (if (char=? #\0 (string-ref intr (- 3 nth)))
+          (number-at (number-at (+ pc nth)))
+          (number-at (+ pc nth))))
 
     (define (load-parameters opc psize)
       (when (> psize 0)
-        (set! r1 (load-parameter codev intr pc 1)) ; At least 1 param
+        (set! r1 (load-parameter 1)) ; At least 1 param
         (when (> psize 1)
-          (set! r2 (load-parameter codev intr pc 2)))
+          (set! r2 (load-parameter 2)))
         (when (> psize 2)
-          (set! r3 (number-at codev (+ pc 3)))))) ; Result, always immediate
+          (set! r3 (number-at (+ pc 3)))))) ; Result, always immediate
 
     (define (value-set! pos value)
       (vector-set! codev pos (format "~a" value)))
@@ -56,7 +59,7 @@
         (opcode "Hlt" 0 0 (lambda () (set! exp #t)))
         (opcode "Add" 1 3 (lambda () (value-set! r3 (+ r1 r2))))
         (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
-        (opcode "Set" 3 1 (lambda () (value-set! (number-at codev (+ pc 1)) user-input)))
+        (opcode "Set" 3 1 (lambda () (value-set! (number-at (+ pc 1)) user-input)))
         (opcode "Out" 4 1 (lambda () (displayln (format "Output: ~a" r1))))
         (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
         (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
