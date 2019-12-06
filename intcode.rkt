@@ -3,7 +3,7 @@
 ; https://adventofcode.com/2019/day/2
 ; https://adventofcode.com/2019/day/5
 
-(struct opcode (name idx psize mcode))
+(struct opcode (name psize mcode))
 
 (define Intcode%
   (class object%
@@ -56,15 +56,15 @@
     (define opcodev
       (list->vector
        (list ; Name Int Params Mcode
-        (opcode "Hlt" 0 0 (lambda () (set! exp #t)))
-        (opcode "Add" 1 3 (lambda () (value-set! r3 (+ r1 r2))))
-        (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
-        (opcode "Set" 3 1 (lambda () (value-set! (number-at (+ pc 1)) user-input)))
-        (opcode "Out" 4 1 (lambda () (displayln (format "Output: ~a" r1))))
-        (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
-        (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
-        (opcode "Lt"  7 3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
-        (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0)))))))
+        (opcode "Hlt" 0 (lambda () (set! exp #t)))
+        (opcode "Add" 3 (lambda () (value-set! r3 (+ r1 r2))))
+        (opcode "Mul" 3 (lambda () (value-set! r3 (* r1 r2))))
+        (opcode "Set" 1 (lambda () (value-set! (number-at (+ pc 1)) user-input)))
+        (opcode "Out" 1 (lambda () (displayln (format "Output: ~a" r1))))
+        (opcode "Jnz" 2 (lambda () (when (not (= r1 0)) (jump r2))))
+        (opcode "Jz"  2 (lambda () (when (= r1 0) (jump r2))))
+        (opcode "Lt"  3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
+        (opcode "Eq"  3 (lambda () (value-set! r3 (if (= r1 r2) 1 0)))))))
 
     (define/public (load-code input)
       (reset)
@@ -74,6 +74,7 @@
       ;(displayln codev)
       (displayln (format "regs: ~a/~a, ~a, ~a ~a ~a ~a, ~a ~a" intr int pc r1 r2 r3 r4 exp jmp)))
 
+    ; CPU core
     (define/public (run)
       (clear-flags)
       (load-intr)
