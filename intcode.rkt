@@ -52,13 +52,30 @@
     (define (value-set! pos value)
       (vector-set! codev pos (format "~a" value)))
 
-    (define int-input 0)
-    (define/public (set-input n) (set! int-input n))
+    (define int-input '())
+    (define/public (set-input n) (set! int-input (cons n int-input)))
+    (define (pop-input)
+      (cond
+        [(empty? int-input) 0]
+        [else
+         (let ([n (car int-input)])
+           (set! int-input (rest int-input))
+           n)]))
 
     (define int-output 0)
-    (define/public (set-output n) (set! int-output n))
+    (define/public (set-output n)
+      (set! int-output n)
+      ;(displayln (format "Set output: ~a" n))
+      )
     (define/public (get-output) int-output)
     (define/public (display-output) (displayln (format "Output: ~a" int-output)))
+
+    (define (load-input)
+      (let ([pos (number-at (+ pc 1))]
+            [n (pop-input)])
+        (value-set! pos (number->string n))
+        ;(displayln (format "Load input: [~a] = ~a" pos n))
+        ))
 
     (define opcodev
       (list->vector
@@ -66,8 +83,7 @@
         (opcode "Hlt" 0 (lambda () (set! exp #t)))
         (opcode "Add" 3 (lambda () (value-set! r3 (+ r1 r2))))
         (opcode "Mul" 3 (lambda () (value-set! r3 (* r1 r2))))
-        (opcode "Set" 1 (lambda () (value-set! (number-at (+ pc 1))
-                                               (number->string int-input))))
+        (opcode "Set" 1 (lambda () (load-input)))
         (opcode "Out" 1 (lambda () (set-output r1)))
         (opcode "Jnz" 2 (lambda () (when (not (= r1 0)) (jump r2))))
         (opcode "Jz"  2 (lambda () (when (= r1 0) (jump r2))))
@@ -91,7 +107,7 @@
                [mcode (opcode-mcode opc)]
                [psize (opcode-psize opc)])
           (load-parameters opc psize)
-          (dump-cpu)
+          ;(dump-cpu)
           (mcode)
           (move-pc psize)
           (run))))))
