@@ -13,10 +13,12 @@
 
 ; Part 1
 (send ic load-code input)
-(send ic set-user-input 1)
+(send ic set-input 1)
 (send ic run)
+(send ic display-output)
 
 ; Part 2
 (send ic load-code input)
-(send ic set-user-input 5)
+(send ic set-input 5)
 (send ic run)
+(send ic display-output)

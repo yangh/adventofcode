@@ -52,8 +52,13 @@
     (define (value-set! pos value)
       (vector-set! codev pos (format "~a" value)))
 
-    (define user-input "1")
-    (define/public (set-user-input n) (set! user-input (format "~a" n)))
+    (define int-input 0)
+    (define/public (set-input n) (set! int-input n))
+
+    (define int-output 0)
+    (define/public (set-output n) (set! int-output n))
+    (define/public (get-output) int-output)
+    (define/public (display-output) (displayln (format "Output: ~a" int-output)))
 
     (define opcodev
       (list->vector
@@ -61,8 +66,9 @@
         (opcode "Hlt" 0 (lambda () (set! exp #t)))
         (opcode "Add" 3 (lambda () (value-set! r3 (+ r1 r2))))
         (opcode "Mul" 3 (lambda () (value-set! r3 (* r1 r2))))
-        (opcode "Set" 1 (lambda () (value-set! (number-at (+ pc 1)) user-input)))
-        (opcode "Out" 1 (lambda () (displayln (format "Output: ~a" r1))))
+        (opcode "Set" 1 (lambda () (value-set! (number-at (+ pc 1))
+                                               (number->string int-input))))
+        (opcode "Out" 1 (lambda () (set-output r1)))
         (opcode "Jnz" 2 (lambda () (when (not (= r1 0)) (jump r2))))
         (opcode "Jz"  2 (lambda () (when (= r1 0) (jump r2))))
         (opcode "Lt"  3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
