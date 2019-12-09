@@ -5,7 +5,7 @@
 
 (provide (all-defined-out))
 
-(struct opcode (name psize mcode))
+(struct opcode (name int psize mcode))
 
 (define Intcode%
   (class object%
@@ -13,30 +13,36 @@
     
     (define debug #f)
     (define/public (set-debug n) (set! debug n))
-    (define (debuginfo s)
-      (when debug
-        (displayln s)))
+    (define (debuginfo s) (when debug (displayln s)))
 
-    ; Registers
-    (define-values (intr int pc r1 r2 r3 r4 exp jmp iow hlt)
-      (values "" 0 0 0 0 0 0 #f #f #f #f))
-
-    ; CPU state
+    ; State
     (define-values (RESET RUNNING PAUSE IOWAIT HALT) (values 0 1  2 3 4))
     (define (state->string s)
       (define sstr (list 'RESET 'RUNNING 'PAUSE 'IOWAIT 'HALT))
       (list-ref sstr s))
-    (define state RESET)
+
     (define (set-state s) (set! state s))
+    (define (reset)
+      (set!-values (state intr int pc r1 r2 r3 r4 exp jmp)
+                   (values RESET "" 0 0 0 0 0 0 #f #f)))
+
+    ; Registers
+    (define-values (state intr int pc r1 r2 r3 r4 exp jmp)
+      (values RESET "" 0 0 0 0 0 0 #f #f))
+
+    (define (clear-flags) (set!-values (exp jmp) (values #f #f)))
+
     (define/public (is-halt?) (= state HALT))
     (define/public (is-pause?) (= state PAUSE))
     (define/public (wait-for-pause)
       (let loop ()
         (when (= state RUNNING)
           (debuginfo (format "Waiting for PAUSE...current: ~a" (state->string state)))
+          ; TODO: use signal to save wait time
           (sleep 0.1)
           (loop))))
 
+    ; CPU core thread
     (define cpu-thread
       (thread
        (lambda ()
@@ -52,21 +58,17 @@
               (debuginfo "Start to RUN")])
            (loop)))))
 
-    (define halt 99)
+    ; Computer memory
     (define codev #f)
 
+    ; Move PC, jump
     (define (goto p j) (set!-values (pc jmp) (values p j)))
     (define (jump p) (goto p #t))
     (define (move-pc psize)
       (when (not jmp) (goto (+ pc psize 1) #f)))
 
-    (define (reset)
-      (set!-values (intr int pc r1 r2 r3 r4 exp jmp iow hlt)
-                   (values "" 0 0 0 0 0 0 #f #f #f #f))
-      ;(set-state RESET)
-      )
-    (define (clear-flags) (set!-values (exp jmp iow hlt) (values #f #f #f #f)))
-   
+    (define halt 99)
+
     ; ABC[DE], DE is the code
     (define (load-intr)
       (let* ([code (vector-ref codev pc)]
@@ -74,7 +76,7 @@
         (set! intr (string-append (make-string (- 5 len) #\0) code))
         (set! int  (string->number (substring intr 3 5)))
         ; HALT
-        (when (= int 99)
+        (when (= int halt)
           (set! int 0))))
     
     ; Immediate mode parameter
@@ -83,9 +85,16 @@
 
     ; Load parameters in 0/1 mode
     (define (load-parameter nth)
-      (if (char=? #\0 (string-ref intr (- 3 nth)))
-          (number-at (number-at (+ pc nth)))
-          (number-at (+ pc nth))))
+      (let ([mode (string-ref intr (- 3 nth))])
+        (cond
+          [(char=? #\0 mode) ; position mode
+           (number-at (number-at (+ pc nth)))]
+          [(char=? #\1 mode) ; immediate mode
+           (number-at (+ pc nth))]
+          [(char=? #\2 mode) ; relative mode
+           (displayln "TODO: relative mode")]
+          [else
+           (displayln ("Unsupported parameter mode: ~a" mode))])))
 
     (define (load-parameters opc psize)
       (when (> psize 0)
@@ -98,6 +107,7 @@
     (define (value-set! pos value)
       (vector-set! codev pos (format "~a" value)))
 
+    ; Input, queued
     (define int-input '())
     (define/public (set-input n)
       (set! int-input (cons n int-input))
@@ -112,19 +122,19 @@
            (set! int-input (rest int-input))
            n)]))
 
+    ; Output
     (define int-output 0)
     (define/public (set-output n)
       (set! int-output n)
       (debuginfo (format "Set output: ~a" n))
       (when pause-on-output
-        (set-state PAUSE))
-      )
+        (set-state PAUSE)))
     (define/public (get-output) int-output)
     (define/public (display-output) (debuginfo (format "Output: ~a" int-output)))
 
     (define pause-on-output #f)
     (define/public (set-pause-on-output p) (set! pause-on-output p))
-    
+
     (define (load-input)
       (let ([pos (number-at (+ pc 1))]
             [empty-input (empty? int-input)]
@@ -143,19 +153,21 @@
       (set! exp #t)
       (set-state HALT))
 
+    ; Micro code supported by the CPU
     (define opcodev
       (list->vector
-       (list ; Name Params Mcode
-        (opcode "Hlt" 0 (lambda () (cpu-halt)))
-        (opcode "Add" 3 (lambda () (value-set! r3 (+ r1 r2))))
-        (opcode "Mul" 3 (lambda () (value-set! r3 (* r1 r2))))
-        (opcode "Set" 1 (lambda () (load-input)))
-        (opcode "Out" 1 (lambda () (set-output r1)))
-        (opcode "Jnz" 2 (lambda () (when (not (= r1 0)) (jump r2))))
-        (opcode "Jz"  2 (lambda () (when (= r1 0) (jump r2))))
-        (opcode "Lt"  3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
-        (opcode "Eq"  3 (lambda () (value-set! r3 (if (= r1 r2) 1 0)))))))
+       (list ; Name Int Params Mcode
+        (opcode "Hlt" 0 0 (lambda () (cpu-halt)))
+        (opcode "Add" 1 3 (lambda () (value-set! r3 (+ r1 r2))))
+        (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
+        (opcode "Set" 3 1 (lambda () (load-input)))
+        (opcode "Out" 4 1 (lambda () (set-output r1)))
+        (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
+        (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
+        (opcode "Lt"  7 3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
+        (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0)))))))
 
+    ; Load program
     (define/public (load-code input)
       (reset)
       (set! codev (list->vector (map string-trim (string-split input ",")))))
@@ -164,7 +176,7 @@
       (debuginfo (format "regs: ~a/~a, ~a, ~a ~a ~a ~a, ~a ~a"
                          intr int pc r1 r2 r3 r4 exp jmp)))
 
-    ; CPU core
+    ; CPU ALU
     (define/public (cpu-run)
       (clear-flags)
       (load-intr)
@@ -174,10 +186,11 @@
         (load-parameters opc psize)
         ;(dump-cpu)
         (mcode)
-        (when (= state RUNNING)
+        (when (= state RUNNING) ; IOWAIT will retry after resumed
           (move-pc psize))
         ))
 
+    ; Run until IOWAIT/PAUSE/HALT
     (define/public (run)
       (set-state RUNNING)
       (thread-send cpu-thread 'r)
