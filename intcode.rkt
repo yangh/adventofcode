@@ -21,16 +21,19 @@
       (define sstr (list 'RESET 'RUNNING 'PAUSE 'IOWAIT 'HALT))
       (list-ref sstr s))
 
-    (define (set-state s) (set! state s))
-    (define (reset)
-      (set!-values (state intr int pc r1 r2 r3 r4 exp jmp)
-                   (values RESET "" 0 0 0 0 0 0 #f #f)))
-
     ; Registers
-    (define-values (state intr int pc r1 r2 r3 r4 exp jmp)
-      (values RESET "" 0 0 0 0 0 0 #f #f))
+    (define-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
+      (values RESET "" 0 0 0 0 0 0 0 #f #f))
 
+    (define (reset)
+      (set!-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
+                   (values RESET "" 0 0 0 0 0 0 0 #f #f)))
+
+    (define (set-state s) (set! state s))
     (define (clear-flags) (set!-values (exp jmp) (values #f #f)))
+    (define (clear-tmp-regs)
+      (set!-values (r1 r2 r3 r4)
+                   (values 0 0 0 0)))
 
     (define/public (is-halt?) (= state HALT))
     (define/public (is-pause?) (= state PAUSE))
@@ -59,7 +62,7 @@
            (loop)))))
 
     ; Computer memory
-    (define codev #f)
+    (define codev (make-vector (* 1024 1024) "0"))
 
     ; Move PC, jump
     (define (goto p j) (set!-values (pc jmp) (values p j)))
@@ -81,7 +84,9 @@
     
     ; Immediate mode parameter
     (define (number-at pos)
-      (string->number (vector-ref codev pos)))
+      (let ([str (vector-ref codev pos)])
+        ;(debuginfo (format "Load number[~a] = ~a" pos str))
+        (string->number str)))
 
     ; Load parameters in 0/1 mode
     (define (load-parameter nth)
@@ -92,17 +97,21 @@
           [(char=? #\1 mode) ; immediate mode
            (number-at (+ pc nth))]
           [(char=? #\2 mode) ; relative mode
-           (displayln "TODO: relative mode")]
+           (number-at (+ rbs (number-at (+ pc nth))))]
           [else
            (displayln ("Unsupported parameter mode: ~a" mode))])))
 
-    (define (load-parameters opc psize)
+    (define (load-parameters psize)
       (when (> psize 0)
         (set! r1 (load-parameter 1)) ; At least 1 param
         (when (> psize 1)
           (set! r2 (load-parameter 2)))
         (when (> psize 2)
-          (set! r3 (number-at (+ pc 3)))))) ; Result, always immediate
+          (set! r3 (number-at (+ pc 3)))  ; Result, always immediate
+          (when (char=? #\2 (string-ref intr 0)) ; Relative mode since day 9
+            (set! r3 (+ rbs r3)))))
+      ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" intr r1 r2 r3))
+      )
 
     (define (value-set! pos value)
       (vector-set! codev pos (format "~a" value)))
@@ -130,13 +139,13 @@
       (when pause-on-output
         (set-state PAUSE)))
     (define/public (get-output) int-output)
-    (define/public (display-output) (debuginfo (format "Output: ~a" int-output)))
+    (define/public (display-output) (displayln (format "Output: ~a" int-output)))
 
     (define pause-on-output #f)
     (define/public (set-pause-on-output p) (set! pause-on-output p))
 
     (define (load-input)
-      (let ([pos (number-at (+ pc 1))]
+      (let ([p1 (number-at (+ pc 1))]
             [empty-input (empty? int-input)]
             [n (pop-input)])
         (cond
@@ -144,14 +153,20 @@
            (debuginfo "Need wait for input..")
            (set-state IOWAIT)]
           [else
-           (value-set! pos (number->string n))
-           (debuginfo (format "Load input: [~a] = ~a" pos n))])
+           (let* ([mode (string-ref intr 2)]
+                  [pos (if (char=? mode #\2) (+ rbs p1) p1)]) ; Relative mode since day 9
+             (value-set! pos (number->string n))
+             (debuginfo (format "Load input: [~a] = ~a" pos n)))])
         ))
 
     (define (cpu-halt)
       (debuginfo "CPU HALT!")
       (set! exp #t)
       (set-state HALT))
+
+    (define (update-rbs offset)
+      (debuginfo (format "Update Rbs: ~a + ~a = ~a" rbs offset (+ rbs offset)))
+      (set! rbs (+ rbs offset)))
 
     ; Micro code supported by the CPU
     (define opcodev
@@ -165,12 +180,17 @@
         (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
         (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
         (opcode "Lt"  7 3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
-        (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0)))))))
+        (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0))))
+        (opcode "Rbs" 9 1 (lambda () (update-rbs r1)))
+        )))
 
     ; Load program
     (define/public (load-code input)
       (reset)
-      (set! codev (list->vector (map string-trim (string-split input ",")))))
+      (let ([strs (map string-trim (string-split input ","))])
+        (for ([idx (range 0 (length strs))])
+          (vector-set! codev idx (list-ref strs idx)))
+        ))
 
     (define (dump-cpu)
       (debuginfo (format "regs: ~a/~a, ~a, ~a ~a ~a ~a, ~a ~a"
@@ -179,11 +199,12 @@
     ; CPU ALU
     (define/public (cpu-run)
       (clear-flags)
+      (clear-tmp-regs)
       (load-intr)
       (let* ([opc (vector-ref opcodev int)]
              [mcode (opcode-mcode opc)]
              [psize (opcode-psize opc)])
-        (load-parameters opc psize)
+        (load-parameters psize)
         ;(dump-cpu)
         (mcode)
         (when (= state RUNNING) ; IOWAIT will retry after resumed
