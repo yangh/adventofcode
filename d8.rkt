@@ -31,4 +31,26 @@ min-z
 min-l
 n1
 n2
+; Part 1
 (* n1 n2)
+
+; Merge layer by pixel
+(define (determine str i)
+  (let ([ln (string-length input)])
+    (let loop ([li 0])
+      (let* ([idx (+ (* li (* 25 6)) i)]
+             [c (string-ref str idx)])
+        (cond
+          [(= li 99) c]
+          [(char=? #\2 c) (loop (add1 li))]
+          [else c])))))
+
+; Merge layers
+(define output (make-string (* 25 6) #\0))
+(for ([i (range 0 (* 25 6))])
+  (string-set! output i (determine input i)))
+
+; Part 2, decoded code
+(for ([i (range 0 6)])
+  (displayln (substring output (* i 25) (* (add1 i) 25))))
+
