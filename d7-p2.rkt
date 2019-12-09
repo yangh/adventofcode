@@ -37,8 +37,6 @@
           [ph (list-ref phs i)])
       (send ic set-input ph)
       (send ic run)
-      ;(send ic display-output)
-      ;(set! o (send ic get-output))
       ))
 
   (let loop ()
@@ -71,8 +69,7 @@
         (when (> n m)
           (set! m n)
           (set! amps as)
-          ;(displayln n)
-          (displayln (format "Max thruster: ~a from ~a" m amps))
+          (displayln m)
           ))))
   (displayln (format "Max thruster: ~a from ~a" m amps))
   m)
