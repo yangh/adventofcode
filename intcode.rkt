@@ -28,7 +28,8 @@
 
     (define (reset)
       (set!-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
-                   (values RESET "" 0 0 0 0 0 0 0 #f #f)))
+                   (values RESET "" 0 0 0 0 0 0 0 #f #f))
+      (codev-clear))
 
     (define (set-state s) (set! state s))
     (define (clear-flags) (set!-values (exp jmp) (values #f #f)))
@@ -85,7 +86,11 @@
       (wait-for-pause))
 
     ; Computer memory, 1M numbers
-    (define codev (make-vector (* 1024 1024) "0"))
+    (define codev-size (* 1024 1024))
+    (define codev (make-vector codev-size "0"))
+    (define (codev-clear)
+      (for ([idx (range 0 codev-size)])
+        (vector-set! codev idx "0")))
 
     ; Load program into memory
     (define/public (load-code input)
