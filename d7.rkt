@@ -5,20 +5,21 @@
 
 (define input (first (input-load-lines 7)))
 
+(define ic (new Intcode%))
+
 (define (test input amps)
-  (define ic (new Intcode%))
   (define o 0)
 
   (for-each
    (lambda (a)
-     (send ic load-code input)
+     (send ic load-code input) ; Assume (reset) called when load code
      (send ic set-pause-on-output #t)
      (send ic set-input o)
      ;(send ic wait-for-pause)
      (send ic set-input a)
      (send ic run)
      ;(send ic wait-for-pause)
-     (send ic display-output)
+     ;(send ic display-output)
      (set! o (send ic get-output)))
    (map string->number (string-split amps ",")))
   o)
@@ -49,7 +50,7 @@
         (when (> n m)
           (set! m n)
           (set! amps as)
-          (displayln n)
+          (displayln m)
           ))))
   (displayln (format "Max thruster: ~a from ~a" m amps))
   m)
