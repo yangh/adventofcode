@@ -10,9 +10,48 @@
 (define Intcode%
   (class object%
     (super-new)
+    
+    (define debug #f)
+    (define/public (set-debug n) (set! debug n))
+    (define (debuginfo s)
+      (when debug
+        (displayln s)))
 
     ; Registers
-    (define-values (intr int pc r1 r2 r3 r4 exp jmp) (values "" 0 0 0 0 0 0 #f #f))
+    (define-values (intr int pc r1 r2 r3 r4 exp jmp iow hlt)
+      (values "" 0 0 0 0 0 0 #f #f #f #f))
+
+    ; CPU state
+    (define-values (RESET RUNNING PAUSE IOWAIT HALT) (values 0 1  2 3 4))
+    (define (state->string s)
+      (define sstr (list 'RESET 'RUNNING 'PAUSE 'IOWAIT 'HALT))
+      (list-ref sstr s))
+    (define state RESET)
+    (define (set-state s) (set! state s))
+    (define/public (is-halt?) (= state HALT))
+    (define/public (is-pause?) (= state PAUSE))
+    (define/public (wait-for-pause)
+      (let loop ()
+        (when (= state RUNNING)
+          (debuginfo (format "Waiting for PAUSE...current: ~a" (state->string state)))
+          (sleep 0.1)
+          (loop))))
+
+    (define cpu-thread
+      (thread
+       (lambda ()
+         (let loop ()
+           (cond
+             [(= state RUNNING)
+              (cpu-run)]
+             [else
+              ; Wait some event before continue
+              (debuginfo (format "CPU paused due to: ~a" (state->string state)))
+              (thread-receive)
+              (set-state RUNNING)
+              (debuginfo "Start to RUN")])
+           (loop)))))
+
     (define halt 99)
     (define codev #f)
 
@@ -21,15 +60,22 @@
     (define (move-pc psize)
       (when (not jmp) (goto (+ pc psize 1) #f)))
 
-    (define (reset) (set!-values (intr int pc r1 r2 r3 r4 exp jmp) (values "" 0 0 0 0 0 0 #f #f)))
-    (define (clear-flags) (set!-values (exp jmp) (values #f #f)))
-
+    (define (reset)
+      (set!-values (intr int pc r1 r2 r3 r4 exp jmp iow hlt)
+                   (values "" 0 0 0 0 0 0 #f #f #f #f))
+      ;(set-state RESET)
+      )
+    (define (clear-flags) (set!-values (exp jmp iow hlt) (values #f #f #f #f)))
+   
     ; ABC[DE], DE is the code
     (define (load-intr)
       (let* ([code (vector-ref codev pc)]
              [len  (string-length code)])
         (set! intr (string-append (make-string (- 5 len) #\0) code))
-        (set! int  (string->number (substring intr 3 5)))))
+        (set! int  (string->number (substring intr 3 5)))
+        ; HALT
+        (when (= int 99)
+          (set! int 0))))
     
     ; Immediate mode parameter
     (define (number-at pos)
@@ -53,10 +99,14 @@
       (vector-set! codev pos (format "~a" value)))
 
     (define int-input '())
-    (define/public (set-input n) (set! int-input (cons n int-input)))
+    (define/public (set-input n)
+      (set! int-input (cons n int-input))
+      (debuginfo (format "Add input: ~a, queue: ~a" n int-input))
+      ;(thread-send cpu-thread 'i)
+      )
     (define (pop-input)
       (cond
-        [(empty? int-input) 0]
+        [(empty? int-input) #f] ; TODO: Use exception instead of #f
         [else
          (let ([n (car int-input)])
            (set! int-input (rest int-input))
@@ -65,22 +115,38 @@
     (define int-output 0)
     (define/public (set-output n)
       (set! int-output n)
-      ;(displayln (format "Set output: ~a" n))
+      (debuginfo (format "Set output: ~a" n))
+      (when pause-on-output
+        (set-state PAUSE))
       )
     (define/public (get-output) int-output)
-    (define/public (display-output) (displayln (format "Output: ~a" int-output)))
+    (define/public (display-output) (debuginfo (format "Output: ~a" int-output)))
 
+    (define pause-on-output #f)
+    (define/public (set-pause-on-output p) (set! pause-on-output p))
+    
     (define (load-input)
       (let ([pos (number-at (+ pc 1))]
+            [empty-input (empty? int-input)]
             [n (pop-input)])
-        (value-set! pos (number->string n))
-        ;(displayln (format "Load input: [~a] = ~a" pos n))
+        (cond
+          [empty-input
+           (debuginfo "Need wait for input..")
+           (set-state IOWAIT)]
+          [else
+           (value-set! pos (number->string n))
+           (debuginfo (format "Load input: [~a] = ~a" pos n))])
         ))
+
+    (define (cpu-halt)
+      (debuginfo "CPU HALT!")
+      (set! exp #t)
+      (set-state HALT))
 
     (define opcodev
       (list->vector
-       (list ; Name Int Params Mcode
-        (opcode "Hlt" 0 (lambda () (set! exp #t)))
+       (list ; Name Params Mcode
+        (opcode "Hlt" 0 (lambda () (cpu-halt)))
         (opcode "Add" 3 (lambda () (value-set! r3 (+ r1 r2))))
         (opcode "Mul" 3 (lambda () (value-set! r3 (* r1 r2))))
         (opcode "Set" 1 (lambda () (load-input)))
@@ -95,19 +161,25 @@
       (set! codev (list->vector (map string-trim (string-split input ",")))))
 
     (define (dump-cpu)
-      ;(displayln codev)
-      (displayln (format "regs: ~a/~a, ~a, ~a ~a ~a ~a, ~a ~a" intr int pc r1 r2 r3 r4 exp jmp)))
+      (debuginfo (format "regs: ~a/~a, ~a, ~a ~a ~a ~a, ~a ~a"
+                         intr int pc r1 r2 r3 r4 exp jmp)))
 
     ; CPU core
-    (define/public (run)
+    (define/public (cpu-run)
       (clear-flags)
       (load-intr)
-      (when (not (= int halt))
-        (let* ([opc (vector-ref opcodev int)]
-               [mcode (opcode-mcode opc)]
-               [psize (opcode-psize opc)])
-          (load-parameters opc psize)
-          ;(dump-cpu)
-          (mcode)
-          (move-pc psize)
-          (run))))))
+      (let* ([opc (vector-ref opcodev int)]
+             [mcode (opcode-mcode opc)]
+             [psize (opcode-psize opc)])
+        (load-parameters opc psize)
+        ;(dump-cpu)
+        (mcode)
+        (when (= state RUNNING)
+          (move-pc psize))
+        ))
+
+    (define/public (run)
+      (set-state RUNNING)
+      (thread-send cpu-thread 'r)
+      (wait-for-pause))
+    ))
