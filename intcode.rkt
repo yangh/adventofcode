@@ -6,6 +6,7 @@
 (provide (all-defined-out))
 
 (struct opcode (name int psize mcode))
+(struct instrc (intr int p1 p2 p3))
 
 (define Intcode%
   (class object%
@@ -24,11 +25,11 @@
 
     ; Registers
     (define-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
-      (values RESET "" 0 0 0 0 0 0 0 #f #f))
+      (values RESET #f 0 0 0 0 0 0 0 #f #f))
 
     (define (reset)
       (set!-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
-                   (values RESET "" 0 0 0 0 0 0 0 #f #f))
+                   (values RESET #f 0 0 0 0 0 0 0 #f #f))
       (codev-clear))
 
     (define (set-state s) (set! state s))
@@ -69,8 +70,7 @@
        (lambda ()
          (let loop ()
            (cond
-             [(= state RUNNING)
-              (cpu-run)]
+             [(= state RUNNING) (cpu-run)]
              [else
               ; Wait some event before continue
               (debuginfo (format "CPU paused due to: ~a" (state->string state)))
@@ -87,73 +87,80 @@
 
     ; Computer memory, 1M numbers
     (define codev-size (* 1024 1024))
-    (define codev (make-vector codev-size "0"))
-    (define (codev-clear)
-      (for ([idx (range 0 codev-size)])
-        (vector-set! codev idx "0")))
+    (define codev (make-vector codev-size 0))
+    (define (codev-clear) (vector-fill! codev 0))
+
+    ; Instruction hash
+    (define instrv (make-hash))
 
     ; Load program into memory
     (define/public (load-code input)
       (reset)
-      (let ([strs (map string-trim (string-split input ","))])
+      (let ([strs (string-split input ",")])
         (for ([idx (range 0 (length strs))])
-          (vector-set! codev idx (list-ref strs idx)))))
+          (vector-set! codev idx
+                       (string->number(string-trim(list-ref strs idx)))))))
 
-    (define halt 99)
+    ; Build new instr or query from hash
+    (define (build-instr coden)
+      (define halt 99)
+      (define instr-len 5)
+
+      (when (not (hash-has-key? instrv coden))
+        (let* ([code (number->string coden)]
+               [len  (string-length code)]
+               [istr (string-append (make-string (- instr-len len) #\0) code)]
+               [int (modulo coden 100)]) ; Last 2 numbers is int
+          (hash-set! instrv coden
+                     (instrc istr
+                             (if (= int halt) 0 int) ; HALT or other
+                             (string->number (substring istr 2 3))
+                             (string->number (substring istr 1 2))
+                             (string->number (substring istr 0 1))))))
+      (hash-ref instrv coden))
 
     ; ABC[DE], DE is the code
     (define (load-intr)
-      (let* ([code (vector-ref codev pc)]
-             [len  (string-length code)])
-        (set! intr (string-append (make-string (- 5 len) #\0) code))
-        (set! int  (string->number (substring intr 3 5)))
-        ; HALT
-        (when (= int halt) (set! int 0))))
+      (set! intr (build-instr (vector-ref codev pc))))
     
     ; Load number from memory at pos
-    (define (number-at pos)
-      (let ([str (vector-ref codev pos)])
-        ;(debuginfo (format "Load number[~a] = ~a" pos str))
-        (string->number str)))
+    (define (number-at pos) (vector-ref codev pos))
 
     ; Raw set on memory
     (define (value-set! pos value)
-      (vector-set! codev pos (format "~a" value)))
+      (vector-set! codev pos value))
 
     ; Load parameters in 0/1/2 mode
-    (define (load-parameter nth)
-      (let ([mode (string-ref intr (- 3 nth))])
+    (define (load-parameter nth mode)
+      (let ([num (number-at (+ pc nth))])
         (cond
-          [(char=? #\0 mode) ; position mode
-           (number-at (number-at (+ pc nth)))]
-          [(char=? #\1 mode) ; immediate mode
-           (number-at (+ pc nth))]
-          [(char=? #\2 mode) ; relative mode
-           (number-at (+ rbs (number-at (+ pc nth))))]
-          [else
-           (displayln ("Unsupported parameter mode: ~a" mode))])))
+          [(= mode 0) (number-at num)] ; position mode
+          [(= mode 1) num]             ; immediate mode
+          [(= mode 2) (number-at (+ rbs num))] ; relative mode
+          [else (displayln ("ERROR: Unsupported parameter mode: ~a" mode))])))
 
     ; Support 0/1/2 mode only for first 2 parameters
     ; The output (3rd) parameter only support 1/2 mode
     (define (load-parameters psize)
       (when (> psize 0)
-        (set! r1 (load-parameter 1)) ; At least 1 param
+        (set! r1 (load-parameter 1 (instrc-p1 intr))) ; At least 1 param
         (when (> psize 1)
-          (set! r2 (load-parameter 2)))
+          (set! r2 (load-parameter 2 (instrc-p2 intr))))
         (when (> psize 2)
           (set! r3 (number-at (+ pc 3)))  ; Result, always immediate
-          (when (char=? #\2 (string-ref intr 0)) ; Relative mode since day 9
+          (when (= 2 (instrc-p3 intr)) ; Relative mode since day 9
             (set! r3 (+ rbs r3)))))
-      ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" intr r1 r2 r3))
+      ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" (instrc-intr intr) r1 r2 r3))
       )
 
     ; Input, queued, FILO, not thread safely
     (define int-input '())
+
     (define/public (set-input n)
       (set! int-input (cons n int-input))
       (debuginfo (format "Add input: ~a, queue: ~a" n int-input)))
 
-    (define (pop-input)
+    (define/public (pop-input)
       (cond
         [(empty? int-input) #f] ; TODO: Use exception instead of #f
         [else
@@ -163,11 +170,14 @@
 
     ; Output
     (define int-output 0)
+
     (define/public (set-output n)
       (set! int-output n)
       (debuginfo (format "Set output: ~a" n))
+      ;(displayln (format "Set output: ~a, pc: ~a" n pc))
       (when pause-on-output
         (set-state PAUSE)))
+
     (define/public (get-output) int-output)
     (define/public (display-output) (displayln (format "Output: ~a" int-output)))
 
@@ -183,9 +193,9 @@
         [else
          (let* ([p1 (number-at (+ pc 1))]
                 [n (pop-input)]
-                [mode (string-ref intr 2)]
-                [pos (if (char=? mode #\2) (+ rbs p1) p1)]) ; Relative mode since day 9
-           (value-set! pos (number->string n))
+                [mode (instrc-p1 intr)]
+                [pos (if (= mode 2) (+ rbs p1) p1)]) ; Relative mode since day 9
+           (value-set! pos n)
            (debuginfo (format "Load input: [~a] = ~a" pos n)))]))
 
     ; Micro code supported by the CPU
@@ -205,15 +215,15 @@
         )))
 
     (define (dump-cpu)
-      (debuginfo (format "regs: ~a/~a, ~a, ~a ~a ~a ~a, ~a ~a"
-                         intr int pc r1 r2 r3 r4 exp jmp)))
+      (debuginfo (format "regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a"
+                         (instrc-intr intr) pc r1 r2 r3 r4 exp jmp)))
 
     ; CPU ALU
     (define (cpu-run)
       (clear-flags)
       (clear-tmp-regs)
       (load-intr)
-      (let* ([opc (vector-ref opcodev int)]
+      (let* ([opc (vector-ref opcodev (instrc-int intr))]
              [mcode (opcode-mcode opc)]
              [psize (opcode-psize opc)])
         (load-parameters psize)
