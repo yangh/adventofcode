@@ -45,7 +45,7 @@
         (when (= state RUNNING)
           (debuginfo (format "Waiting for PAUSE...current: ~a" (state->string state)))
           ; TODO: use signal to save wait time
-          (sleep 0.1)
+          (sleep 0.001)
           (loop))))
 
     ; CPU HALT, 99
@@ -229,7 +229,8 @@
         (load-parameters psize)
         ;(dump-cpu)
         (mcode)
-        (when (= state RUNNING) ; IOWAIT will retry after resumed
+        (when (or (= state RUNNING) ; IOWAIT will retry after resumed
+                  (= state PAUSE))  ; PAUSE but will continue later
           (move-pc psize))
         ))
     ))
