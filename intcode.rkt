@@ -82,8 +82,10 @@
     ; Run until IOWAIT/PAUSE/HALT
     (define/public (run)
       (set-state RUNNING)
-      (thread-send cpu-thread 'r)
-      (wait-for-pause))
+      (let loop ()
+        (when (= state RUNNING)
+          (cpu-run)
+          (loop))))
 
     ; Computer memory, 1M numbers
     (define codev-size (* 1024 1024))
@@ -91,7 +93,7 @@
     (define (codev-clear) (vector-fill! codev 0))
 
     ; Instruction hash
-    (define instrv (make-hash))
+    (define instrv (make-hasheqv))
 
     ; Load program into memory
     (define/public (load-code input)
