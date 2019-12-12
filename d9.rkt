@@ -24,5 +24,8 @@
   (send ic run)
   (send ic display-output))
 
+; Output: 2682107844
 (part1 input 1)
+
+; Output: 34738
 (part1 input 2)
