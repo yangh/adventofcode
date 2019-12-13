@@ -64,21 +64,6 @@
     (define (move-pc psize)
       (when (not jmp) (goto (+ pc psize 1) #f)))
 
-    ; CPU core thread
-    (define cpu-thread
-      (thread
-       (lambda ()
-         (let loop ()
-           (cond
-             [(= state RUNNING) (cpu-run)]
-             [else
-              ; Wait some event before continue
-              (debuginfo (format "CPU paused due to: ~a" (state->string state)))
-              (thread-receive)
-              (set-state RUNNING)
-              (debuginfo "Start to RUN")])
-           (loop)))))
-
     ; Run until IOWAIT/PAUSE/HALT
     (define/public (run)
       (set-state RUNNING)
@@ -94,6 +79,7 @@
 
     ; Instruction hash
     (define instrv (make-hasheqv))
+    (define enable-instrv-hash #t) ; TBC: do we have any bug here?
 
     ; Load program into memory
     (define/public (load-code input)
@@ -108,22 +94,28 @@
       (define halt 99)
       (define instr-len 5)
 
-      (when (not (hash-has-key? instrv coden))
-        (let* ([code (number->string coden)]
-               [len  (string-length code)]
-               [istr (string-append (make-string (- instr-len len) #\0) code)]
-               [int (modulo coden 100)]) ; Last 2 numbers is int
-          (hash-set! instrv coden
-                     (instrc istr
-                             (if (= int halt) 0 int) ; HALT or other
-                             (string->number (substring istr 2 3))
-                             (string->number (substring istr 1 2))
-                             (string->number (substring istr 0 1))))))
-      (hash-ref instrv coden))
+      (let* ([code (number->string coden)]
+             [len  (string-length code)]
+             [istr (string-append (make-string (- instr-len len) #\0) code)]
+             [int (modulo coden 100)]) ; Last 2 numbers is int
+        (instrc istr
+                (if (= int halt) 0 int) ; HALT or other
+                (string->number (substring istr 2 3))
+                (string->number (substring istr 1 2))
+                (string->number (substring istr 0 1)))))
+
+    (define (parse-instr coden)
+      (when enable-instrv-hash
+        (when (not (hash-has-key? instrv coden))
+          (hash-set! instrv coden (build-instr coden))))
+
+      (if enable-instrv-hash
+          (hash-ref instrv coden)
+          (build-instr coden)))
 
     ; ABC[DE], DE is the code
     (define (load-intr)
-      (set! intr (build-instr (vector-ref codev pc))))
+      (set! intr (parse-instr (vector-ref codev pc))))
     
     ; Load number from memory at pos
     (define (number-at pos) (vector-ref codev pos))
@@ -136,8 +128,8 @@
     (define (load-parameter nth mode)
       (let ([num (number-at (+ pc nth))])
         (cond
-          [(= mode 0) (number-at num)] ; position mode
-          [(= mode 1) num]             ; immediate mode
+          [(= mode 0) (number-at num)]         ; position mode
+          [(= mode 1) num]                     ; immediate mode
           [(= mode 2) (number-at (+ rbs num))] ; relative mode
           [else (displayln ("ERROR: Unsupported parameter mode: ~a" mode))])))
 
