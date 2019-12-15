@@ -38,9 +38,9 @@
     (when (= (modulo i 50) 0) (displayln ""))
     (let ([c (vector-ref stage i)])
       (when (< (modulo i 50) 46)
-      (display (format "~a" (if (= c 0) "." c)))))
-    )
+        (display (format "~a" (if (= c 0) "." c))))))
   (displayln "")
   )
 
 (part1 input)
+
