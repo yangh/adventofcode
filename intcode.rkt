@@ -40,6 +40,7 @@
 
     (define/public (is-halt?) (= state HALT))
     (define/public (is-pause?) (= state PAUSE))
+    (define/public (is-iowait?) (= state IOWAIT))
     (define/public (wait-for-pause)
       (let loop ()
         (when (= state RUNNING)
@@ -152,7 +153,9 @@
 
     (define/public (set-input n)
       (set! int-input (cons n int-input))
-      (debuginfo (format "Add input: ~a, queue: ~a" n int-input)))
+      (debuginfo (format "Add input: ~a, queue: ~a" n int-input))
+      ; Mark state as ready to run
+      (set! state RUNNING))
 
     (define/public (pop-input)
       (cond
