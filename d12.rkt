@@ -23,6 +23,11 @@
 (define (load-data n)
   (map parse-moon (input-load-lines n)))
 
+(define (moon-energy-kinetic m)
+  (+ (abs (moon-vx m))
+     (abs (moon-vy m))
+     (abs (moon-vz m))))
+
 (define (moon-energy m)
   (* (+ (abs (moon-px m))
         (abs (moon-py m))
@@ -43,18 +48,18 @@
 (define (shuffle-x n)
   (define x '())
   (for ([i (range 0 n)])
-    (for ([y (range (add1 i) n)])
-      ;(displayln (format "~a" (list i y)))
-      (set! x (append x (list (list i y))))))
+       (for ([y (range (add1 i) n)])
+            ;(displayln (format "~a" (list i y)))
+            (set! x (append x (list (list i y))))))
   x)
 
 (define shuffler (shuffle-x 4))
 
 (define (vel-off x1 x2)
   (cond
-    [(> x1 x2) '(-1 1)]
-    [(< x1 x2) '(1 -1)]
-    [else      '(0  0)]))
+    [(> x1 x2) '(-1 1 #t)]
+    [(< x1 x2) '(1 -1 #t)]
+    [else      '(0  0 #f)]))
 
 (define (simulate-motion idxs)
   (let* ([m0 (list-ref moons (list-ref idxs 0))]
@@ -65,10 +70,10 @@
     ;(displayln (format "Check ~a, v off: ~a ~a ~a"
     ;                   idxs x-off y-off z-off))
     (set-moon-vx! m0 (+ (moon-vx m0) (first  x-off)))
-    (set-moon-vx! m1 (+ (moon-vx m1) (second x-off)))
     (set-moon-vy! m0 (+ (moon-vy m0) (first  y-off)))
-    (set-moon-vy! m1 (+ (moon-vy m1) (second y-off)))
     (set-moon-vz! m0 (+ (moon-vz m0) (first  z-off)))
+    (set-moon-vx! m1 (+ (moon-vx m1) (second x-off)))
+    (set-moon-vy! m1 (+ (moon-vy m1) (second y-off)))
     (set-moon-vz! m1 (+ (moon-vz m1) (second z-off)))
     ))
 
@@ -77,28 +82,34 @@
   (set-moon-py! m (+ (moon-py m) (moon-vy m)))
   (set-moon-pz! m (+ (moon-pz m) (moon-vz m))))
 
+; Simulate n steps
 (define (simulate n)
   (for ([i (range 0 n)])
-    ; Cal velocity
-    (for-each simulate-motion shuffler)
-    ; Update position by velocity
-    (for-each moon-update-pos moons)
-    ;(displayln (format "Total energy: ~a" (moon-energy-all)))
-    ))
+       ; Cal velocity
+       (for-each simulate-motion shuffler)
+       ; Update position by velocity
+       (for-each moon-update-pos moons)
+       (displayln (format "Total energy: ~a" (moon-energy-all moons)))
+       ))
 
 (define (moons-at-original)
-  (andmap
-   (lambda (m mo)
-     (and
+  (and
+   ; All velocity is zero
+   (andmap
+    (lambda (m)
       (and (= 0 (moon-vx m))
            (= 0 (moon-vy m))
-           (= 0 (moon-vz m)))
+           (= 0 (moon-vz m))))
+    moons)
+   (andmap
+    ; All position go to original
+    (lambda (m mo)
       (and (= (moon-px m) (moon-px mo))
            (= (moon-py m) (moon-py mo))
-           (= (moon-pz m) (moon-pz mo)))))
-   moons moons-original))
+           (= (moon-pz m) (moon-pz mo))))
+    moons moons-original)))
 
-
+; Iterate untial moons go back to original position
 (define (simulate-to-original)
   (let loop ([steps 1])
     ; Cal velocity
@@ -113,11 +124,11 @@
         (loop (add1 steps)))
     ))
 
-(define fn "12-1")
+(define fn "12-e1")
 (set! moons (load-data fn))
 (set! moons-original (load-data fn))
 
-;(simulate 2772)
-(simulate-to-original)
+(simulate 2772)
+;(simulate-to-original)
 (dump-moons moons)
 (dump-moons moons-original)
