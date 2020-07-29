@@ -27,6 +27,7 @@
     (define-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
       (values RESET #f 0 0 0 0 0 0 0 #f #f))
 
+    ; Reset
     (define (reset)
       (set!-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
                    (values RESET #f 0 0 0 0 0 0 0 #f #f))
