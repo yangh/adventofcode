@@ -17,8 +17,8 @@
 (define (fuel-acc m)
   (define f (fuel m))
   (cond
-    [(> f 0)
-     (+ f (fuel-acc f))]
-    [else 0]))
+    [(<= f 0) 0]
+    [else
+     (+ f (fuel-acc f))]))
 
 (displayln (format "Day1 part 2: ~a" (cal fuel-acc ms)))
