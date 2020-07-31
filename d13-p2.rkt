@@ -8,7 +8,7 @@
 (define (part2 input)
   (define ic (new Intcode%))
   (send ic set-pause-on-output #t)
-  (send ic set-debug #t)
+  (send ic set-debug #f)
 
   (define (read-i)
     (send ic run)
@@ -66,10 +66,10 @@
       (when (>= x 0)
         (let ([idx (+ x (* h y))])
           (when (< idx 1000)
-            (when (= c 0)
-              (when gaming ; Block destroied
-                (when (= (vector-ref stage idx) 2)
-                  (set! nblks (sub1 nblks)))))
+            (when (and gaming ; Block destroied
+                       (= c 0)
+                       (= (vector-ref stage idx) 2))
+              (set! nblks (sub1 nblks)))
             ; New tile
             (vector-set! stage idx c)))
         (when (= c 2) (set! nblks (add1 nblks)))
@@ -93,6 +93,7 @@
       ;(sleep 0.5)
       (paddle-move))
 
+    ; TODO: How to stop after nblks = 0 ?
     (when (not (send ic is-halt?))
       (loop)))
   )
