@@ -10,7 +10,7 @@
   (define values
     (map (lambda (str)
            (string->number
-            (string-trim (list-ref (string-split str "=") 1))))
+            (string-trim (second (string-split str "=")))))
          (string-split l1 ",")))
   (moon (list-ref values 0)
         (list-ref values 1)
@@ -22,11 +22,6 @@
 
 (define (load-data n)
   (map parse-moon (input-load-lines n)))
-
-(define (moon-energy-kinetic m)
-  (+ (abs (moon-vx m))
-     (abs (moon-vy m))
-     (abs (moon-vz m))))
 
 (define (moon-energy m)
   (* (+ (abs (moon-px m))
@@ -43,38 +38,39 @@
   (for-each
    (lambda (m) (displayln (format "~a" m))) ms)
   (displayln (format "Total energy: ~a" (moon-energy-all ms)))
-  (displayln (format "Moons at original: ~a" (moons-at-original))))
+  (displayln (format "Moons at original: ~a" (moons-at-original 0))))
 
 (define (shuffle-x n)
   (define x '())
   (for ([i (range 0 n)])
-       (for ([y (range (add1 i) n)])
-            ;(displayln (format "~a" (list i y)))
-            (set! x (append x (list (list i y))))))
+    (for ([y (range (add1 i) n)])
+      ;(displayln (format "~a" (list i y)))
+      (set! x (append x (list (list i y))))))
   x)
 
-(define shuffler (shuffle-x 4))
+(define moon-shuffler (shuffle-x 4))
 
-(define (vel-off x1 x2)
+(define (vel-delta x1 x2)
   (cond
     [(> x1 x2) '(-1 1 #t)]
     [(< x1 x2) '(1 -1 #t)]
+    ; Add 0 is faster than if/when/else branch
     [else      '(0  0 #f)]))
 
 (define (simulate-motion idxs)
   (let* ([m0 (list-ref moons (list-ref idxs 0))]
          [m1 (list-ref moons (list-ref idxs 1))]
-         [x-off (vel-off (moon-px m0) (moon-px m1))]
-         [y-off (vel-off (moon-py m0) (moon-py m1))]
-         [z-off (vel-off (moon-pz m0) (moon-pz m1))])
-    ;(displayln (format "Check ~a, v off: ~a ~a ~a"
-    ;                   idxs x-off y-off z-off))
-    (set-moon-vx! m0 (+ (moon-vx m0) (first  x-off)))
-    (set-moon-vy! m0 (+ (moon-vy m0) (first  y-off)))
-    (set-moon-vz! m0 (+ (moon-vz m0) (first  z-off)))
-    (set-moon-vx! m1 (+ (moon-vx m1) (second x-off)))
-    (set-moon-vy! m1 (+ (moon-vy m1) (second y-off)))
-    (set-moon-vz! m1 (+ (moon-vz m1) (second z-off)))
+         [x-delta (vel-delta (moon-px m0) (moon-px m1))]
+         [y-delta (vel-delta (moon-py m0) (moon-py m1))]
+         [z-delta (vel-delta (moon-pz m0) (moon-pz m1))])
+    ;(displayln (format "Check ~a, v delta: ~a ~a ~a"
+    ;                   idxs x-delta y-delta z-delta))
+    (set-moon-vx! m0 (+ (moon-vx m0) (first  x-delta)))
+    (set-moon-vy! m0 (+ (moon-vy m0) (first  y-delta)))
+    (set-moon-vz! m0 (+ (moon-vz m0) (first  z-delta)))
+    (set-moon-vx! m1 (+ (moon-vx m1) (second x-delta)))
+    (set-moon-vy! m1 (+ (moon-vy m1) (second y-delta)))
+    (set-moon-vz! m1 (+ (moon-vz m1) (second z-delta)))
     ))
 
 (define (moon-update-pos m)
@@ -85,50 +81,63 @@
 ; Simulate n steps
 (define (simulate n)
   (for ([i (range 0 n)])
-       ; Cal velocity
-       (for-each simulate-motion shuffler)
-       ; Update position by velocity
-       (for-each moon-update-pos moons)
-       (displayln (format "Total energy: ~a" (moon-energy-all moons)))
-       ))
+    ; Cal velocity
+    (for-each simulate-motion moon-shuffler)
+    ; Update position by velocity
+    (for-each moon-update-pos moons)
+    ;(displayln (format "Total energy: ~a" (moon-energy-all moons)))
+    ))
 
-(define (moons-at-original)
+(define (moons-at-original dim)
   (and
    ; All velocity is zero
    (andmap
     (lambda (m)
-      (and (= 0 (moon-vx m))
-           (= 0 (moon-vy m))
-           (= 0 (moon-vz m))))
+      (cond
+        [(= dim 0) (= 0 (moon-vx m))]
+        [(= dim 1) (= 0 (moon-vy m))]
+        [(= dim 2) (= 0 (moon-vz m))]))
     moons)
+   ; All position go to original
    (andmap
-    ; All position go to original
     (lambda (m mo)
-      (and (= (moon-px m) (moon-px mo))
-           (= (moon-py m) (moon-py mo))
-           (= (moon-pz m) (moon-pz mo))))
+      (cond
+        [(= dim 0) (= (moon-px m) (moon-px mo))]
+        [(= dim 1) (= (moon-py m) (moon-py mo))]
+        [(= dim 2) (= (moon-pz m) (moon-pz mo))]))
     moons moons-original)))
 
-; Iterate untial moons go back to original position
-(define (simulate-to-original)
+; Iterate until moons go back to the original position
+(define (simulate-to-original dim)
+  ; Reset input data
+  (set! moons (load-data fn))
   (let loop ([steps 1])
-    ; Cal velocity
-    (for-each simulate-motion shuffler)
+    ; Calculate velocity
+    (for-each simulate-motion moon-shuffler)
     ; Update position by velocity
     (for-each moon-update-pos moons)
     ;(displayln (format "Total energy: ~a" (moon-energy-all)))
-    (when (= 0 (modulo steps 1000000))
-      (displayln (format "Iterator step: ~a" steps)))
-    (if (moons-at-original)
-        (displayln (format "Found steps: ~a" steps))
-        (loop (add1 steps)))
-    ))
+    (when (= 0 (modulo steps 100000))
+      (displayln (format "Iterating step: ~a" steps)))
+    (cond
+      [(moons-at-original dim)
+       (displayln (format "Found steps: ~a" steps))
+       steps]
+      [else (loop (add1 steps))])))
 
-(define fn "12-e1")
+(define fn "12-1")
 (set! moons (load-data fn))
 (set! moons-original (load-data fn))
-
-(simulate 2772)
-;(simulate-to-original)
-(dump-moons moons)
 (dump-moons moons-original)
+
+; Part 1
+(simulate 1000)
+(dump-moons moons)
+
+; Part 2
+; Calculate LCM of steps of cycling for each axis
+(lcm
+ (simulate-to-original 0)
+ (simulate-to-original 1)
+ (simulate-to-original 2))
+(dump-moons moons)
