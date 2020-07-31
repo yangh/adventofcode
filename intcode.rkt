@@ -1,7 +1,6 @@
 #lang racket
 
-; https://adventofcode.com/2019/day/2
-; https://adventofcode.com/2019/day/5
+; Used in https://adventofcode.com/2019/day/2,5,7,9,11,13
 
 (provide (all-defined-out))
 
@@ -27,13 +26,13 @@
       (if (< s (length sstr)) (list-ref sstr s) 'UNKNOWN))
 
     ; Registers
-    (define-values (state intr int pc r1 r2 r3 r4 rbase exp jmp)
-      (values RESET #f 0 0 0 0 0 0 0 #f #f))
+    (define-values (state intr pc r1 r2 r3 r4 rbase exp jmp)
+      (values RESET #f 0 0 0 0 0 0 #f #f))
 
     ; Reset
     (define (reset)
-      (set!-values (state intr int pc r1 r2 r3 r4 rbase exp jmp)
-                   (values RESET #f 0 0 0 0 0 0 0 #f #f))
+      (set!-values (state intr pc r1 r2 r3 r4 rbase exp jmp)
+                   (values RESET #f 0 0 0 0 0 0 #f #f))
       (codev-clear))
 
     (define (set-state s) (set! state s))
