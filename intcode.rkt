@@ -5,8 +5,11 @@
 
 (provide (all-defined-out))
 
-(struct opcode (name int psize mcode))
-(struct instrc (intr int p1 p2 p3))
+; Opcode: Name, Op Code, Param numbers, Micro code
+(struct opcode (name opc psize mcode))
+
+; Instruction: parsed intr, opcode, parameters
+(struct instrc (intr opc p1 p2 p3))
 
 (define Intcode%
   (class object%
@@ -21,26 +24,24 @@
     (define-values (RESET RUNNING PAUSE IOWAIT HALT) (values 0 1  2 3 4))
     (define (state->string s)
       (define sstr (list 'RESET 'RUNNING 'PAUSE 'IOWAIT 'HALT))
-      (list-ref sstr s))
+      (if (< s (length sstr)) (list-ref sstr s) 'UNKNOWN))
 
     ; Registers
-    (define-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
+    (define-values (state intr int pc r1 r2 r3 r4 rbase exp jmp)
       (values RESET #f 0 0 0 0 0 0 0 #f #f))
 
     ; Reset
     (define (reset)
-      (set!-values (state intr int pc r1 r2 r3 r4 rbs exp jmp)
+      (set!-values (state intr int pc r1 r2 r3 r4 rbase exp jmp)
                    (values RESET #f 0 0 0 0 0 0 0 #f #f))
       (codev-clear))
 
     (define (set-state s) (set! state s))
-    (define (clear-flags) (set!-values (exp jmp) (values #f #f)))
-    (define (clear-tmp-regs)
-      (set!-values (r1 r2 r3 r4)
-                   (values 0 0 0 0)))
+    (define (clear-flag-regs) (set!-values (exp jmp) (values #f #f)))
+    (define (clear-general-regs) (set!-values (r1 r2 r3 r4) (values 0 0 0 0)))
 
-    (define/public (is-halt?) (= state HALT))
-    (define/public (is-pause?) (= state PAUSE))
+    (define/public (is-halt?)   (= state HALT))
+    (define/public (is-pause?)  (= state PAUSE))
     (define/public (is-iowait?) (= state IOWAIT))
     (define/public (wait-for-pause)
       (let loop ()
@@ -57,8 +58,8 @@
 
     ; Update relative mode base
     (define (update-rbs offset)
-      (debuginfo (format "Update Rbs: ~a + ~a = ~a" rbs offset (+ rbs offset)))
-      (set! rbs (+ rbs offset)))
+      (debuginfo (format "Update Rbs: ~a + ~a = ~a" rbase offset (+ rbase offset)))
+      (set! rbase (+ rbase offset)))
 
     ; Move PC, jump
     (define (goto p j) (set!-values (pc jmp) (values p j)))
@@ -106,6 +107,7 @@
                 (string->number (substring istr 1 2))
                 (string->number (substring istr 0 1)))))
 
+    ; Parse instruction from number to struct instrc
     (define (parse-instr coden)
       (when enable-instrv-hash
         (when (not (hash-has-key? instrv coden))
@@ -115,6 +117,7 @@
           (hash-ref instrv coden)
           (build-instr coden)))
 
+    ; Load instruction into intr register from RAM at address in pc register
     ; ABC[DE], DE is the code
     (define (load-intr)
       (set! intr (parse-instr (vector-ref codev pc))))
@@ -130,9 +133,9 @@
     (define (load-parameter nth mode)
       (let ([num (number-at (+ pc nth))])
         (cond
-          [(= mode 0) (number-at num)]         ; position mode
-          [(= mode 1) num]                     ; immediate mode
-          [(= mode 2) (number-at (+ rbs num))] ; relative mode
+          [(= mode 0) (number-at num)]           ; position mode
+          [(= mode 1) num]                       ; immediate mode
+          [(= mode 2) (number-at (+ rbase num))] ; relative mode
           [else (displayln ("ERROR: Unsupported parameter mode: ~a" mode))])))
 
     ; Support 0/1/2 mode only for first 2 parameters
@@ -145,7 +148,7 @@
         (when (> psize 2)
           (set! r3 (number-at (+ pc 3)))  ; Result, always immediate
           (when (= 2 (instrc-p3 intr)) ; Relative mode since day 9
-            (set! r3 (+ rbs r3)))))
+            (set! r3 (+ rbase r3)))))
       ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" (instrc-intr intr) r1 r2 r3))
       )
 
@@ -189,28 +192,26 @@
          (debuginfo "Need wait for input..")
          (set-state IOWAIT)]
         [else
-         (let* ([p1 (number-at (+ pc 1))]
-                [n (pop-input)]
-                [mode (instrc-p1 intr)]
-                [pos (if (= mode 2) (+ rbs p1) p1)]) ; Relative mode since day 9
-           (value-set! pos n)
-           (debuginfo (format "Load input: [~a] = ~a" pos n)))]))
+         (let* ([addr  (number-at (+ pc 1))]
+                [value (pop-input)]
+                [mode  (instrc-p1 intr)]
+                [dest  (if (= mode 2) (+ rbase addr) addr)]) ; Relative mode since day 9
+           (value-set! dest value)
+           (debuginfo (format "Load input: [~a] = ~a" dest value)))]))
 
     ; Micro code supported by the CPU
     (define opcodev
-      (list->vector
-       (list ; Name Int Params Mcode
-        (opcode "Hlt" 0 0 (lambda () (cpu-halt)))
-        (opcode "Add" 1 3 (lambda () (value-set! r3 (+ r1 r2))))
-        (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
-        (opcode "Set" 3 1 (lambda () (load-input)))
-        (opcode "Out" 4 1 (lambda () (set-output r1)))
-        (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
-        (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
-        (opcode "Lt"  7 3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
-        (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0))))
-        (opcode "Rbs" 9 1 (lambda () (update-rbs r1)))
-        )))
+      (vector ;Name Int Params Micocode
+       (opcode "Hlt" 0 0 (lambda () (cpu-halt)))
+       (opcode "Add" 1 3 (lambda () (value-set! r3 (+ r1 r2))))
+       (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
+       (opcode "Set" 3 1 (lambda () (load-input)))
+       (opcode "Out" 4 1 (lambda () (set-output r1)))
+       (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
+       (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
+       (opcode "Lt"  7 3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
+       (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0))))
+       (opcode "Rbs" 9 1 (lambda () (update-rbs r1)))))
 
     (define (dump-cpu)
       (debuginfo (format "regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a"
@@ -218,10 +219,10 @@
 
     ; CPU ALU
     (define (cpu-run)
-      (clear-flags)
-      (clear-tmp-regs)
+      (clear-flag-regs)
+      (clear-general-regs)
       (load-intr)
-      (let* ([opc (vector-ref opcodev (instrc-int intr))]
+      (let* ([opc (vector-ref opcodev (instrc-opc intr))]
              [mcode (opcode-mcode opc)]
              [psize (opcode-psize opc)])
         (load-parameters psize)
