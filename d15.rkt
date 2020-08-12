@@ -25,13 +25,25 @@
 (define EMPT 4)
 (define stage-strs (list  "#" "." "@" "D" " "))
 
-(define move-delta
+; Clock wise
+(define move-delta1
   ; Move  x,y,direction,index
   (list '(0 -1 1 0) ; North
         '(1  0 4 1) ; East
         '(0  1 2 2) ; South
         '(-1 0 3 3) ; West
         ))
+
+; Counter lock wise
+(define move-delta2
+  ; Move  x,y,direction,index
+  (list '(0 -1 1 0) ; North
+        '(-1 0 3 1) ; West
+        '(0  1 2 2) ; South
+        '(1  0 4 3) ; East
+        ))
+
+(define move-delta move-delta1)
 
 ; Choose move back direction
 (define (get-move-back-dir dir)
@@ -62,6 +74,7 @@
 
 ; How many times we stepped on this point
 (define stage-weight2 (make-vector (* h v) 0))
+(define stage-weight2-strs (list  "." "A" "B" "C" "D" "E"))
 
 (define (update-pos dir ret update-axis)
   (let* ([axis-off dir]
@@ -98,6 +111,7 @@
         [(= ret OXYG)
          (update-pos dir ret #t)
          ;(dump-stage)
+         (ddisplayln (format "Moved ~a ~a" x y))
          (displayln (format "Found Oxygen: ~a ~a" x y))
          (set! ox x)
          (set! oy y)])
@@ -126,12 +140,25 @@
 
   (let ([didx (+ x (* y h))])
     (for ([i (range 0 (* h v))])
-      (when (= (modulo i h) (sub1 h)) (displayln ""))
       (let ([c (vector-ref stage i)])
         (if (= i didx)
             (display "D")
-            (display (list-ref stage-strs c))))))
+            (display (list-ref stage-strs c))))
+      (when (= (modulo i h) (sub1 h)) (displayln ""))))
   (displayln ""))
+
+(define (dump-stage-weight2)
+  (displayln "Dump stage weight")
+  ; Print cabinet
+  (for ([i (range 0 h)]) (display "-"))
+  (displayln "")
+
+  (for ([i (range 0 (* h v))])
+    (let ([c (vector-ref stage-weight2 i)])
+      (display (list-ref stage-weight2-strs (abs c))))
+    (when (= (modulo i h) (sub1 h)) (displayln "")))
+  (displayln ""))
+
 
 ; Select way by weight
 (define (find-weightest-dir dirs)
@@ -181,21 +208,24 @@
 (define (go)
   (send ic load-code input)
   (let loop ()
-    (displayln "Loop")
+    ;(displayln "Loop")
     (let ([dirs (find-dir-open)])
       (cond
         [(= 0 (length dirs)) (displayln "Dead end")]
         [else
          (ddisplayln (format "Dirs x ~a y ~a, ~a" x y dirs))
+         (when (= 1 (length dirs))
+           (displayln "Dead end found, fall back"))
          (let ([ret (move dirs)])
            (when (not (= OXYG ret))
              (dump-stage)
-             (sleep 0.08)
+             ;(sleep 0.08)
              (loop)))]))))
 
 (go)
 (reset-xy)
 (dump-stage)
+(dump-stage-weight2)
 
 ;TODO: Wall on the road, and try to find all road & wall
 
