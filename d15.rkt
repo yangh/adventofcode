@@ -11,62 +11,39 @@
   (when #t; (> ox 0)
     (displayln msg)))
 
+; Direction
 (define mn 1) ; North
 (define ms 2) ; South
 (define mw 3) ; West
 (define me 4) ; East
 
+; Stage blocks index
 (define WALL 0)
 (define ROAD 1)
 (define OXYG 2)
+(define DROD 3)
 (define EMPT 4)
+(define stage-strs (list  "#" "." "@" "D" " "))
 
-(define m-delta
-  (list '(0 -1 1) ; North
-        '(1  0 4) ; East
-        '(0  1 2) ; South
-        '(-1 0 3) ; West
+(define move-delta
+  ; Move  x,y,direction,index
+  (list '(0 -1 1 0) ; North
+        '(1  0 4 1) ; East
+        '(0  1 2 2) ; South
+        '(-1 0 3 3) ; West
         ))
+
+; Choose move back direction
+(define (get-move-back-dir dir)
+  (let ([idx (list-ref dir 3)])
+    (list-ref move-delta (modulo (+ idx 2) 4))))
 
 (define ic (new Intcode%))
 (send ic set-pause-on-output #t)
 ;(send ic set-debug #t)
 
-(define h 50)
+(define h 60)
 (define v h)
-
-(define stage (make-vector (* h v) 4))
-
-; How many times we stepped on this point
-(define stage-weight2 (make-vector (* h v) 0))
-
-(define (update-pos dir ret)
-  (let* ([axis-off dir]
-         [nx (+ x (first axis-off))]
-         [ny (+ y (second axis-off))]
-         [idx (+ nx (* ny h))])
-    (when (not (= ret 0))
-      (set! x nx)
-      (set! y ny))
-    (vector-set! stage idx ret)
-    (vector-set! stage-weight2 idx
-                 (sub1 (vector-ref stage-weight2 idx)))))
-
-; Move
-(define (move dir)
-  (send ic set-input (third dir))
-  (send ic run)
-  (let ([ret (send ic get-output)])
-    (update-pos dir ret)
-    (cond
-      ;[(= ret WALL) (displayln "It's wall")]
-      [(= ret ROAD) (ddisplayln "Moved")]
-      [(= ret OXYG)
-       (displayln (format "Found Oxygen: ~a ~a" x y))
-       (set! ox x)
-       (set! oy y)
-       (dump-stage)])
-    ret))
 
 ; Init position
 (define x (/ h 2))
@@ -76,10 +53,55 @@
   (set! x (/ h 2))
   (set! y (/ v 2)))
 
+; Oxygen System position
 (define ox 0)
 (define oy 0)
 
-(send ic load-code input)
+; Stage
+(define stage (make-vector (* h v) EMPT))
+
+; How many times we stepped on this point
+(define stage-weight2 (make-vector (* h v) 0))
+
+(define (update-pos dir ret update-axis)
+  (let* ([axis-off dir]
+         [nx (+ x (first axis-off))]
+         [ny (+ y (second axis-off))]
+         [idx (+ nx (* ny h))])
+    (when (and update-axis (not (= ret WALL)))
+      (set! x nx)
+      (set! y ny))
+    (vector-set! stage idx ret)
+    (when update-axis
+      (vector-set! stage-weight2 idx
+                   (sub1 (vector-ref stage-weight2 idx))))))
+
+; Intcode move
+(define (intcode-move dir)
+  (send ic set-input (third dir))
+  (send ic run)
+  (send ic get-output))
+
+; Move
+(define (move dirs)
+  (let ([dir (find-weightest-dir dirs)])
+    (let ([ret (intcode-move dir)])
+      (ddisplayln (format "Move ~a, ret ~a" dir ret))
+      (cond
+        [(= ret WALL)
+         ;(displayln "It's wall")
+         (update-pos dir ret #f)]
+        [(= ret ROAD)
+         (retrofit dir dirs)
+         (update-pos dir ret #t)
+         (ddisplayln (format "Moved ~a ~a" x y))]
+        [(= ret OXYG)
+         (update-pos dir ret #t)
+         ;(dump-stage)
+         (displayln (format "Found Oxygen: ~a ~a" x y))
+         (set! ox x)
+         (set! oy y)])
+      ret)))
 
 (define (find-dir-open)
   (foldl
@@ -95,7 +117,7 @@
                  [(= c EMPT) (list (list (+ c w2) dir))]
                  [(= c ROAD) (list (list (+ c w2) dir))]
                  [else '()]))))
-   '() m-delta))
+   '() move-delta))
 
 (define (dump-stage)
   ; Print cabinet
@@ -105,17 +127,10 @@
   (let ([didx (+ x (* y h))])
     (for ([i (range 0 (* h v))])
       (when (= (modulo i h) (sub1 h)) (displayln ""))
-      (let* ([c (vector-ref stage i)]
-             [di (+ (/ h 2) (* (/ v 2) h))])
+      (let ([c (vector-ref stage i)])
         (if (= i didx)
             (display "D")
-            (display (format "~a"
-                             (cond
-                               [(= c 0) "#"]
-                               [(= c 1) "."]
-                               [(= c 2) "@"]
-                               [(= c 3) "D"]
-                               [(= c 4) " "])))))))
+            (display (list-ref stage-strs c))))))
   (displayln ""))
 
 ; Select way by weight
@@ -128,23 +143,60 @@
    (cdr dirs))
   (second dir))
 
+; Explore more blocks before move forward
+(define (retrofit dir dirs)
+  ; Move back
+  (intcode-move (get-move-back-dir dir))
+
+  ; Try each dirs
+  (for-each
+   (lambda (d)
+     (when (not (= (list-ref dir 3)
+                   (list-ref d 3)))
+       (let ([ret (intcode-move d)])
+         (ddisplayln (format "Retrofit Move ~a, ret ~a" d ret))
+         (cond
+           [(= ret WALL)
+            ;(displayln "It's wall")
+            (update-pos d ret #f)]
+           [(= ret ROAD)
+            (update-pos d ret #f)
+            ; Move back
+            (intcode-move (get-move-back-dir d))]
+           [(= ret OXYG)
+            (update-pos d ret #f)
+            ; Move back
+            (intcode-move (get-move-back-dir d))
+            ;TODO Do some thing
+            (displayln (format "Found Oxygen - Retrofit: ~a ~a" x y))
+            (set! ox x)
+            (set! oy y)])
+         (dump-stage))))
+   (map second dirs))
+
+  ; Move forward
+  (intcode-move dir)
+  )
+
 (define (go)
+  (send ic load-code input)
   (let loop ()
+    (displayln "Loop")
     (let ([dirs (find-dir-open)])
       (cond
         [(= 0 (length dirs)) (displayln "Dead end")]
         [else
          (ddisplayln (format "Dirs x ~a y ~a, ~a" x y dirs))
-         (let ([ret (move (find-weightest-dir dirs))])
+         (let ([ret (move dirs)])
            (when (not (= OXYG ret))
              (dump-stage)
              (sleep 0.08)
              (loop)))]))))
 
 (go)
-
 (reset-xy)
 (dump-stage)
+
 ;TODO: Wall on the road, and try to find all road & wall
 
 ;(part1 input)
