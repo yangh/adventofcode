@@ -43,7 +43,7 @@
         '(1  0 4 3) ; East
         ))
 
-(define move-delta move-delta1)
+(define move-delta move-delta2)
 
 ; Choose move back direction
 (define (get-move-back-dir dir)
@@ -54,7 +54,7 @@
 (send ic set-pause-on-output #t)
 ;(send ic set-debug #t)
 
-(define h 60)
+(define h 50)
 (define v h)
 
 ; Init position
@@ -74,7 +74,7 @@
 
 ; How many times we stepped on this point
 (define stage-weight2 (make-vector (* h v) 0))
-(define stage-weight2-strs (list  "." "A" "B" "C" "D" "E"))
+(define stage-weight2-strs (list  "." "A" "B" "C" "D" "E" "F" "G" "H"))
 
 (define (update-pos dir ret update-axis)
   (let* ([axis-off dir]
@@ -130,6 +130,7 @@
                (cond
                  [(= c EMPT) (list (list (+ c w2) dir))]
                  [(= c ROAD) (list (list (+ c w2) dir))]
+                 [(= c OXYG) (list (list (+ c w2) dir))]
                  [else '()]))))
    '() move-delta))
 
@@ -219,11 +220,17 @@
          (let ([ret (move dirs)])
            (when (not (= OXYG ret))
              (dump-stage)
-             ;(sleep 0.08)
+             (flush-output)
+             (sleep 0.04)
              (loop)))]))))
 
+(set! move-delta move-delta1)
 (go)
 (reset-xy)
+;(set! move-delta move-delta2)
+(go)
+(reset-xy)
+
 (dump-stage)
 (dump-stage-weight2)
 
