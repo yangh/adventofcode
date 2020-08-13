@@ -54,7 +54,7 @@
 (send ic set-pause-on-output #t)
 ;(send ic set-debug #t)
 
-(define h 50)
+(define h 42)
 (define v h)
 
 ; Init position
@@ -76,16 +76,32 @@
 (define stage-weight2 (make-vector (* h v) 0))
 (define stage-weight2-strs (list  "." "A" "B" "C" "D" "E" "F" "G" "H"))
 
+; Init path list
+; paths item (list x y))
+(define paths '())
+(define (path-reset) (set! paths '()))
+(define (path-empty) (= 0 (length paths)))
+(define (path-push a) (set! paths (append (list a) paths)))
+(define (path-peak) (car paths))
+(define (path-peak2) (car (cdr paths)))
+(define (path-len) (length paths))
+(define (path-pop)
+  (let ([a (car paths)])
+    (set! paths (cdr paths))
+    a))
+(define (path-dump-len) (displayln (format "Path len: ~a" (path-len))))
+
 (define (path-add x y)
   (cond
     [(path-empty) (path-push (list x y))]
     [(and (> (path-len) 1)
-          (pos-equal (path-peak2) (list x y)))
-     (displayln (format "Path fallback: ~a ~a" x y))
+          (path-equal (path-peak2) (list x y)))
+     ;(displayln (format "Path fallback: ~a ~a" x y))
      (path-pop)]
     [else (path-push (list x y))]))
      
-
+; Update current position
+; and reduce the weight of the passed position for DFS?/BFS?
 (define (update-pos dir ret update-axis)
   (let* ([axis-off dir]
          [nx (+ x (first axis-off))]
@@ -128,7 +144,9 @@
          (set! oy y)])
       ret)))
 
-(define (find-dir-open)
+; Find all open dirs in types in a list of
+;  '(weight dir)
+(define (find-dir-open-at x y dir-types)
   (foldl
    (lambda (dir result)
      (append result
@@ -139,9 +157,7 @@
                     [w2 (vector-ref stage-weight2 idx)])
                ;(ddisplayln (format "Find ~a ~a ~a ~a" nx ny c w2))
                (cond
-                 [(= c EMPT) (list (list (+ c w2) dir))]
-                 [(= c ROAD) (list (list (+ c w2) dir))]
-                 [(= c OXYG) (list (list (+ c w2) dir))]
+                 [(member c dir-types) (list (list (+ c w2) dir))]
                  [else '()]))))
    '() move-delta))
 
@@ -218,38 +234,20 @@
   (intcode-move dir)
   )
 
-; Init path list
-;(define paths (list (list x y)))
-(define paths '())
-(define (path-reset) (set! paths '()))
-(define (path-empty) (= 0 (length paths)))
-(define (path-push a) (set! paths (append (list a) paths)))
-(define (path-peak) (car paths))
-(define (path-peak2) (car (cdr paths)))
-(define (path-len) (length paths))
-(define (path-pop)
-  (let ([a (car paths)])
-    (set! paths (cdr paths))
-    a))
-
-(define (pos-equal a b)
-  (and
-   (= (list-ref a 0) (list-ref b 0))
-   (= (list-ref a 1) (list-ref b 1))))
-
-
+(define (path-equal a b)
+  (and (= (list-ref a 0) (list-ref b 0))
+       (= (list-ref a 1) (list-ref b 1))))
 
 (define (go)
   (send ic load-code input)
   (let loop ()
     ;(displayln "Loop")
-    (let ([dirs (find-dir-open)])
+    (let ([dirs (find-dir-open-at x y (list EMPT ROAD OXYG))])
       (cond
         [(= 0 (length dirs)) (displayln "Dead end")]
         [else
          (ddisplayln (format "Dirs x ~a y ~a, ~a" x y dirs))
-         (when (= 1 (length dirs))
-           (displayln "Dead end found, fall back"))
+         ;(when (= 1 (length dirs)) (displayln "Dead end found, fall back"))
          (let ([ret (move dirs)])
            (when (not (= OXYG ret))
              ;(dump-stage)
@@ -257,19 +255,68 @@
              ;(sleep 0.04)
              (loop)))]))))
 
-(set! move-delta move-delta1)
-(go)
-(reset-xy)
+; Part 1
+(define (part1)
+  (set! move-delta move-delta1)
+  (go)
+  (reset-xy) ; Move D to original position
+  (dump-stage)
+  ;(dump-stage-weight2)
+  (path-dump-len))
+
+(part1)
+
+; Part 2
+; Fill all the area with oxygen gradually
+(define open-dirs (list (list ox oy)))
+
+(define (pos-move-to x y dir)
+  (list (+ x (first dir)) (+ y (second dir))))
+
+(define (fill-oxygen)
+  (define new-dirs '())
+  (for-each (λ (o)
+              (let* ([x (first o)]
+                     [y (second o)]
+                     [idx (+ x (* y h))]
+                     [dirs (find-dir-open-at x y (list ROAD))])
+                ;(displayln (format "Open dirs at ~a ~a: ~a" x y dirs))
+                (vector-set! stage idx OXYG)
+                (for-each (λ (d)
+                            (set! new-dirs (append new-dirs (list (pos-move-to x y (second d))))))
+                          dirs)))
+            open-dirs)
+  (set! open-dirs new-dirs))
+
+(define (go-fill)
+  (let loop ()
+    (cond
+      [(empty? open-dirs)
+       (displayln (format "Full filled in ~a steps" (path-len)))]
+      [else
+       (fill-oxygen)
+       (when (not (empty? open-dirs))
+         (path-push (list (length open-dirs) open-dirs)))
+       (when (= -1 (modulo (path-len) 100))
+         (dump-stage)
+         (flush-output)
+         (sleep 1))
+       (loop)])))
+
+;Try to find all road & wall
 ; Round 2 to explore full map
-;(set! move-delta move-delta2)
-;(go)
-;(reset-xy)
+; WARN: Assume the max branch number is 2.
+;(set! move-delta move-delta2) ; another option to explore full map
+(define (part2)
+  (path-reset)
+  (go)
+  (reset-xy)
+  (dump-stage)
+  (path-dump-len)
 
-(dump-stage)
-;(dump-stage-weight2)
 
-(displayln (format "Path len: ~a" (path-len)))
+  (path-reset)
+  (go-fill)
+  (dump-stage))
 
-;TODO: Wall on the road, and try to find all road & wall
-
-;(part1 input)
+(part2)
