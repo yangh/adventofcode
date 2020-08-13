@@ -8,7 +8,7 @@
 (define dbg #f)
 
 (define (ddisplayln msg)
-  (when #t; (> ox 0)
+  (when dbg
     (displayln msg)))
 
 ; Direction
@@ -76,6 +76,16 @@
 (define stage-weight2 (make-vector (* h v) 0))
 (define stage-weight2-strs (list  "." "A" "B" "C" "D" "E" "F" "G" "H"))
 
+(define (path-add x y)
+  (cond
+    [(path-empty) (path-push (list x y))]
+    [(and (> (path-len) 1)
+          (pos-equal (path-peak2) (list x y)))
+     (displayln (format "Path fallback: ~a ~a" x y))
+     (path-pop)]
+    [else (path-push (list x y))]))
+     
+
 (define (update-pos dir ret update-axis)
   (let* ([axis-off dir]
          [nx (+ x (first axis-off))]
@@ -83,7 +93,8 @@
          [idx (+ nx (* ny h))])
     (when (and update-axis (not (= ret WALL)))
       (set! x nx)
-      (set! y ny))
+      (set! y ny)
+      (path-add x y))
     (vector-set! stage idx ret)
     (when update-axis
       (vector-set! stage-weight2 idx
@@ -199,12 +210,34 @@
             (displayln (format "Found Oxygen - Retrofit: ~a ~a" x y))
             (set! ox x)
             (set! oy y)])
-         (dump-stage))))
+         ;(dump-stage)
+         )))
    (map second dirs))
 
   ; Move forward
   (intcode-move dir)
   )
+
+; Init path list
+;(define paths (list (list x y)))
+(define paths '())
+(define (path-reset) (set! paths '()))
+(define (path-empty) (= 0 (length paths)))
+(define (path-push a) (set! paths (append (list a) paths)))
+(define (path-peak) (car paths))
+(define (path-peak2) (car (cdr paths)))
+(define (path-len) (length paths))
+(define (path-pop)
+  (let ([a (car paths)])
+    (set! paths (cdr paths))
+    a))
+
+(define (pos-equal a b)
+  (and
+   (= (list-ref a 0) (list-ref b 0))
+   (= (list-ref a 1) (list-ref b 1))))
+
+
 
 (define (go)
   (send ic load-code input)
@@ -219,20 +252,23 @@
            (displayln "Dead end found, fall back"))
          (let ([ret (move dirs)])
            (when (not (= OXYG ret))
-             (dump-stage)
-             (flush-output)
-             (sleep 0.04)
+             ;(dump-stage)
+             ;(flush-output)
+             ;(sleep 0.04)
              (loop)))]))))
 
 (set! move-delta move-delta1)
 (go)
 (reset-xy)
+; Round 2 to explore full map
 ;(set! move-delta move-delta2)
-(go)
-(reset-xy)
+;(go)
+;(reset-xy)
 
 (dump-stage)
-(dump-stage-weight2)
+;(dump-stage-weight2)
+
+(displayln (format "Path len: ~a" (path-len)))
 
 ;TODO: Wall on the road, and try to find all road & wall
 
