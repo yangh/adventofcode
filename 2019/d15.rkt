@@ -85,11 +85,16 @@
 (define (path-peak) (car paths))
 (define (path-peak2) (car (cdr paths)))
 (define (path-len) (length paths))
+(define (path-dump-len) (displayln (format "Path len: ~a" (path-len))))
+
 (define (path-pop)
   (let ([a (car paths)])
     (set! paths (cdr paths))
     a))
-(define (path-dump-len) (displayln (format "Path len: ~a" (path-len))))
+
+(define (path-equal a b)
+  (and (= (list-ref a 0) (list-ref b 0))
+       (= (list-ref a 1) (list-ref b 1))))
 
 (define (path-add x y)
   (cond
@@ -107,12 +112,12 @@
          [nx (+ x (first axis-off))]
          [ny (+ y (second axis-off))]
          [idx (+ nx (* ny h))])
-    (when (and update-axis (not (= ret WALL)))
-      (set! x nx)
-      (set! y ny)
-      (path-add x y))
     (vector-set! stage idx ret)
     (when update-axis
+      (when (not (= ret WALL))
+        (set! x nx)
+        (set! y ny)
+        (path-add x y))
       (vector-set! stage-weight2 idx
                    (sub1 (vector-ref stage-weight2 idx))))))
 
@@ -231,12 +236,7 @@
    (map second dirs))
 
   ; Move forward
-  (intcode-move dir)
-  )
-
-(define (path-equal a b)
-  (and (= (list-ref a 0) (list-ref b 0))
-       (= (list-ref a 1) (list-ref b 1))))
+  (intcode-move dir))
 
 (define (go)
   (send ic load-code input)
@@ -297,10 +297,10 @@
        (fill-oxygen)
        (when (not (empty? open-dirs))
          (path-push (list (length open-dirs) open-dirs)))
-       (when (= -1 (modulo (path-len) 100))
+       (when (= 0 (modulo (path-len) 1))
          (dump-stage)
          (flush-output)
-         (sleep 1))
+         (sleep 0.2))
        (loop)])))
 
 ;Try to find all road & wall
@@ -308,12 +308,12 @@
 ; WARN: Assume the max branch number is 2.
 ;(set! move-delta move-delta2) ; another option to explore full map
 (define (part2)
+  ; Depends on part 1
   (path-reset)
   (go)
   (reset-xy)
   (dump-stage)
   (path-dump-len)
-
 
   (path-reset)
   (go-fill)

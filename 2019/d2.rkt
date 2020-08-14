@@ -24,11 +24,7 @@
     ;(displayln (format "Pos: ~a" pos))
     (let ([op (vector-ref ints pos)])
       (cond
-        [(= op 99)
-         ;(displayln "99")
-         ;(displayln ints)
-         #f
-         ]
+        [(= op 99) #f]
         [(= op 1)
          (op3 + ints pos)
          (intcode ints (+ pos 4))]

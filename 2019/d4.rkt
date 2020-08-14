@@ -29,7 +29,7 @@
          ))
 
 ;(count 254032 789860)
-;(count 254032 789860 password-p1?)
+(count 254032 789860 password-p1?)
 
 (define (password-p2? n)
   (let* ([ns (string->list (format "~a" n))]
