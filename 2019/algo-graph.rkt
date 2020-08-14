@@ -92,7 +92,7 @@
 
 ; Set stage data
 (define (stage-set! x y c)
-   (vector-set! stage (+ x (* h y)) c))
+  (vector-set! stage (+ x (* h y)) c))
 
 ; Find all open dirs in types in a list of
 ;  '(weight dir)
@@ -110,3 +110,16 @@
                  [(member c dir-types) (list (list (+ c w2) dir))]
                  [else '()]))))
    '() move-delta))
+
+
+(define (dump-stage)
+  ; Print cabinet
+  (for ([i (range 0 h)]) (display "-"))
+  (displayln "")
+
+
+  (for ([i (range 0 (* h v))])
+    (let ([c (vector-ref stage i)])
+      (display (list-ref stage-strs c)))
+    (when (= (modulo i h) (sub1 h)) (displayln "")))
+  (displayln ""))

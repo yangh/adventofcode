@@ -17,44 +17,51 @@
 
 (send ic load-code input)
 
-(define wx 0)
-(define x 0)
-(define y 0)
+(define xy-init 2)
+(define x xy-init)
+(define y xy-init)
 
 ; Explore the map
 (let loop ()
   (let ([n (intcode-run)])
+    ; Print the map
     (cond
-      [(= n 10) (displayln "")
-                (set! wx (max x wx))
-                (set! x 0)
-                (set! y (add1 y))]
+      [(= n 10) (displayln "")]
       [(= n 35) (display "#")
+                (stage-set! x y WALL)
                 (path-add x y)]
-      [(= n 46) (display ".")]
+      [(= n 46) (display ".")
+                (stage-set! x y ROAD)]
       [(= n 94) (display "^")]
       [(= n 62) (display ">")]
       [(= n 60) (display "<")]
       [(= n 118) (display "v")]
       [else     (display "*")])
-    (set! x (add1 x))
-    (stage-set! x y n))
+    ; Update x, y
+    (cond
+      [(= n 10)
+       (set! x xy-init)
+       (set! y (add1 y))]
+      [else
+       (set! x (add1 x))]))
+
   (when (not (or (send ic is-halt?)
                  (send ic is-iowait?)))
     (loop)))
 
-(set-h! wx)
-(set-v! y)
+; Part 1: sum of the alignment parameters
+(foldl + 0
+       (map (λ (pos)
+              (let ([px (first pos)]
+                    [py (second pos)])
+                ;(displayln (format "Check pos: ~a" pos))
+                (let ([dirs (find-dir-open-at px py (list WALL))])
+                  (cond
+                    [(= 4 (length dirs))
+                     (ddisplayln (format "Intersection: ~a, ~a" (- px xy-init) (- py xy-init)))
+                     (stage-set! px py OXYG)
+                     (* (- px xy-init) (- py xy-init))]
+                    [else 0]))))
+            paths))
 
-(foldl
- (λ (pos result)
-   (let ([px (first pos)]
-         [py (second pos)])
-     (when (and (> px 0) (< px h)
-                (> py 0) (< py v))
-       (displayln (format "Check pos: ~a" pos))
-       (let ([dirs (find-dir-open-at (first pos) (second pos) (list 35))])
-         (when (= 4 (length dirs))
-           (displayln (format "Intersection: ~a, ~a" pos dirs))))))
-   0)
- 0 paths)
+;(dump-stage)
