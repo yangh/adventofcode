@@ -2,6 +2,10 @@
 ;
 ; Utilities for algorithm of graphy
 ;
+;   1. Path Stack API
+;   2. Find open paths, select by weight
+;   3. ...
+;
 (provide (all-defined-out))
 
 ; Path --------------------
@@ -61,6 +65,11 @@
 (define (set-move-cclock-wise)
   (set! move-delta move-delta2))
 
+; Choose move back direction
+(define (get-move-back-dir dir)
+  (let ([idx (list-ref dir 3)])
+    (list-ref move-delta (modulo (+ idx 2) 4))))
+
 ; -----------------
 
 ; Direction
@@ -87,8 +96,12 @@
 (define stage (make-vector (* h v) EMPT))
 
 ; How many times we stepped on this point
-(define stage-weight2 (make-vector (* h v) 0))
-(define stage-weight2-strs (list  "." "A" "B" "C" "D" "E" "F" "G" "H"))
+(define stage-weight (make-vector (* h v) 0))
+(define stage-weight-strs (list  "." "A" "B" "C" "D" "E" "F" "G" "H"))
+(define (stage-weight-sub1 x y)
+  (let ([idx (+ x (* h y))])
+    (vector-set! stage-weight idx
+                 (sub1 (vector-ref stage-weight idx)))))
 
 ; Set stage data
 (define (stage-set! x y c)
@@ -104,22 +117,45 @@
                     [ny (+ y (second dir))]
                     [idx (+ nx (* ny h))]
                     [c (vector-ref stage idx)]
-                    [w2 (vector-ref stage-weight2 idx)])
+                    [w2 (vector-ref stage-weight idx)])
                ;(ddisplayln (format "Find ~a ~a ~a ~a" nx ny c w2))
                (cond
                  [(member c dir-types) (list (list (+ c w2) dir))]
                  [else '()]))))
    '() move-delta))
 
+; Select weightest way
+(define (find-weightest-dir dirs)
+  (define dir (first dirs))
+  (for-each
+   (lambda (d)
+     (when (> (first d) (first dir))
+       (set! dir d)))
+   (cdr dirs))
+  (second dir))
 
-(define (dump-stage)
+(define (dump-stage [delay 0])
   ; Print cabinet
   (for ([i (range 0 h)]) (display "-"))
   (displayln "")
 
-
   (for ([i (range 0 (* h v))])
     (let ([c (vector-ref stage i)])
       (display (list-ref stage-strs c)))
+    (when (= (modulo i h) (sub1 h)) (displayln "")))
+  (displayln "")
+  (flush-output)
+  (sleep delay))
+
+
+(define (dump-stage-weight)
+  (displayln "Dump stage weight")
+  ; Print cabinet
+  (for ([i (range 0 h)]) (display "-"))
+  (displayln "")
+
+  (for ([i (range 0 (* h v))])
+    (let ([c (vector-ref stage-weight i)])
+      (display (list-ref stage-weight-strs (abs c))))
     (when (= (modulo i h) (sub1 h)) (displayln "")))
   (displayln ""))

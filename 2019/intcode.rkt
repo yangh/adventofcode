@@ -1,14 +1,8 @@
 #lang racket
 
-; Used in https://adventofcode.com/2019/day/2,5,7,9,11,13
+; Used in https://adventofcode.com/2019/day/2,5,7,9,11,13,15,17
 
 (provide (all-defined-out))
-
-; Opcode: Name, Op Code, Param numbers, Micro code
-(struct opcode (name opc psize mcode))
-
-; Instruction: parsed intr, opcode, parameters
-(struct instrc (intr opc p1 p2 p3))
 
 (define Intcode%
   (class object%
@@ -18,7 +12,13 @@
     (define debug #f)
     (define/public (set-debug n) (set! debug n))
     (define (debuginfo s) (when debug (displayln s)))
+  
+    ; Opcode: Name, Op Code, Param numbers, Micro code
+    (struct opcode (name opc psize mcode))
 
+    ; Instruction: parsed intr, opcode, parameters
+    (struct instrc (intr opc p1 p2 p3))
+    
     ; State
     (define-values (RESET RUNNING PAUSE IOWAIT HALT) (values 0 1  2 3 4))
     (define (state->string s)
@@ -39,6 +39,7 @@
     (define (clear-flag-regs) (set!-values (exp jmp) (values #f #f)))
     (define (clear-general-regs) (set!-values (r1 r2 r3 r4) (values 0 0 0 0)))
 
+    ; State API
     (define/public (is-halt?)   (= state HALT))
     (define/public (is-pause?)  (= state PAUSE))
     (define/public (is-iowait?) (= state IOWAIT))
@@ -80,8 +81,8 @@
     (define (codev-clear) (vector-fill! codev 0))
 
     ; Instruction hash
-    (define instrv (make-hasheqv))
-    (define enable-instrv-hash #t) ; TBC: do we have any bug here?
+    (define instr-cache (make-hasheqv))
+    (define instr-cache-enabled #t) ; TBC: do we have any bug here?
 
     ; Load program into memory
     (define/public (load-code input)
@@ -108,12 +109,12 @@
 
     ; Parse instruction from number to struct instrc
     (define (parse-instr coden)
-      (when enable-instrv-hash
-        (when (not (hash-has-key? instrv coden))
-          (hash-set! instrv coden (build-instr coden))))
+      (when instr-cache-enabled
+        (when (not (hash-has-key? instr-cache coden))
+          (hash-set! instr-cache coden (build-instr coden))))
 
-      (if enable-instrv-hash
-          (hash-ref instrv coden)
+      (if instr-cache-enabled
+          (hash-ref instr-cache coden)
           (build-instr coden)))
 
     ; Load instruction into intr register from RAM at address in pc register
@@ -146,7 +147,7 @@
           (set! r2 (load-parameter 2 (instrc-p2 intr))))
         (when (> psize 2)
           (set! r3 (number-at (+ pc 3)))  ; Result, always immediate
-          (when (= 2 (instrc-p3 intr)) ; Relative mode since day 9
+          (when (= 2 (instrc-p3 intr))    ; Relative mode since day 9
             (set! r3 (+ rbase r3)))))
       ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" (instrc-intr intr) r1 r2 r3))
       )
@@ -170,19 +171,17 @@
 
     ; Output
     (define int-output 0)
+    (define pause-on-output #f)
+    (define/public (set-pause-on-output p) (set! pause-on-output p))
 
     (define/public (set-output n)
       (set! int-output n)
       (debuginfo (format "Set output: ~a" n))
-      ;(displayln (format "Set output: ~a, pc: ~a" n pc))
       (when pause-on-output
         (set-state PAUSE)))
 
     (define/public (get-output) int-output)
     (define/public (display-output) (displayln (format "Output: ~a" int-output)))
-
-    (define pause-on-output #f)
-    (define/public (set-pause-on-output p) (set! pause-on-output p))
 
     ; Load input, trigger IOWAIT if input queue is empty
     (define (load-input)
@@ -198,6 +197,9 @@
            (value-set! dest value)
            (debuginfo (format "Load input: [~a] = ~a" dest value)))]))
 
+    (define (cmpv func v1 v2 dst) (value-set! dst (if (func v1 v2) 1 0)))
+    (define (jmp-if dst condition) (when condition (jump dst)))
+
     ; Micro code supported by the CPU
     (define opcodev
       (vector ;Name Int Params Micocode
@@ -206,10 +208,10 @@
        (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
        (opcode "Set" 3 1 (lambda () (load-input)))
        (opcode "Out" 4 1 (lambda () (set-output r1)))
-       (opcode "Jnz" 5 2 (lambda () (when (not (= r1 0)) (jump r2))))
-       (opcode "Jz"  6 2 (lambda () (when (= r1 0) (jump r2))))
-       (opcode "Lt"  7 3 (lambda () (value-set! r3 (if (< r1 r2) 1 0))))
-       (opcode "Eq"  8 3 (lambda () (value-set! r3 (if (= r1 r2) 1 0))))
+       (opcode "Jnz" 5 2 (lambda () (jmp-if r2 (not (= r1 0)))))
+       (opcode "Jz"  6 2 (lambda () (jmp-if r2 (= r1 0))))
+       (opcode "Lt"  7 3 (lambda () (cmpv < r1 r2 r3)))
+       (opcode "Eq"  8 3 (lambda () (cmpv = r1 r2 r3)))
        (opcode "Rbs" 9 1 (lambda () (update-rbs r1)))))
 
     (define (dump-cpu)
