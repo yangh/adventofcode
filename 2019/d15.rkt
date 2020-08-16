@@ -112,7 +112,8 @@
          ;(when (= 1 (length dirs)) (displayln "Dead end found, fall back"))
          (let ([ret (move dirs)])
            (when (not (= OXYG ret))
-             ;(dump-stage 0.04)
+             (set-current-droid-pos! x y)
+             (dump-stage 0.1 #t)
              (loop)))]))))
 
 ; Part 1
@@ -124,6 +125,7 @@
   ;(dump-stage-weight2)
   (path-dump-len))
 
+(debug-set! #f)
 (part1)
 
 ; Part 2
@@ -156,8 +158,8 @@
        (fill-oxygen)
        (when (not (empty? open-dirs))
          (path-push (list (length open-dirs) open-dirs)))
-       (when (= -1 (modulo (path-len) 1))
-         (dump-stage 0.2))
+       (when (= 0 (modulo (path-len) 1))
+         (dump-stage 0.1))
        (loop)])))
 
 ;Try to find all road & wall

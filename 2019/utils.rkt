@@ -7,6 +7,7 @@
   (port->lines (open-input-file (format "inputs/d~a.txt" d))))
 
 (define dbg #f)
+(define (debug-set! d) (set! dbg d))
 
 (define (ddisplayln msg)
   (when dbg

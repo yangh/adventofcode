@@ -12,7 +12,7 @@
 ; paths item (list x y))
 (define paths '())
 (define (path-reset) (set! paths '()))
-(define (path-empty) (= 0 (length paths)))
+(define (path-empty?) (= 0 (length paths)))
 (define (path-push a) (set! paths (append (list a) paths)))
 (define (path-peak) (car paths))
 (define (path-peak2) (car (cdr paths)))
@@ -30,7 +30,7 @@
 
 (define (path-add x y)
   (cond
-    [(path-empty) (path-push (list x y))]
+    [(path-empty?) (path-push (list x y))]
     [(and (> (path-len) 1)
           (path-equal (path-peak2) (list x y)))
      ;(displayln (format "Path fallback: ~a ~a" x y))
@@ -86,11 +86,19 @@
 (define EMPT 4)
 (define stage-strs (list  "#" "." "@" "D" " "))
 
+; Width, Height
 (define h 50)
 (define v h)
 
 (define (set-h! n) (set! h n))
 (define (set-v! n) (set! v n))
+
+; Current droid position
+(define dx 0)
+(define dy 0)
+(define (set-current-droid-pos! x y)
+  (set! dx x)
+  (set! dy y))
 
 ; Stage
 (define stage (make-vector (* h v) EMPT))
@@ -102,6 +110,9 @@
   (let ([idx (+ x (* h y))])
     (vector-set! stage-weight idx
                  (sub1 (vector-ref stage-weight idx)))))
+(define (stage-weight-set! x y w)
+  (let ([idx (+ x (* h y))])
+    (vector-set! stage-weight idx w)))
 
 ; Set stage data
 (define (stage-set! x y c)
@@ -134,15 +145,18 @@
    (cdr dirs))
   (second dir))
 
-(define (dump-stage [delay 0])
+(define (dump-stage [delay 0] [show-droid #f])
   ; Print cabinet
   (for ([i (range 0 h)]) (display "-"))
   (displayln "")
 
-  (for ([i (range 0 (* h v))])
-    (let ([c (vector-ref stage i)])
-      (display (list-ref stage-strs c)))
-    (when (= (modulo i h) (sub1 h)) (displayln "")))
+  (let ([cidx (+ dx (* dy h))])
+    (for ([i (range 0 (* h v))])
+      (let ([c (vector-ref stage i)])
+        (if (and show-droid (= cidx i))
+            (display "D")
+            (display (list-ref stage-strs c))))
+      (when (= (modulo i h) (sub1 h)) (displayln ""))))
   (displayln "")
   (flush-output)
   (sleep delay))
