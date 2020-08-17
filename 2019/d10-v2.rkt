@@ -3,7 +3,8 @@
 (require "utils.rkt")
 (require "algo-graph.rkt")
 
-; Find the step value on line
+; Find the step value of x/y on line to reach out
+; all the star on the line
 (define (step-on-line poff)
   (let* ([xoff  (first poff)]
          [yoff (second poff)]
@@ -16,15 +17,16 @@
       [(= 0 xoff) (list 0 ybase)]
       [(= 0 yoff) (list xbase 0)]
       [(= x1 y1)  (list xbase ybase)]
-      [(or (= 0 (modulo x1 y1)) (= 0 (modulo y1 x1)))
-       (if (> x1 y1)
-           (list (* xbase (/ x1 y1)) ybase)
-           (list xbase (* ybase (/ y1 x1))))]
-      [(> gcdn 1)
-       (list (* xbase (/ x1 gcdn)) (* ybase (/ y1 gcdn)))]
-      [else poff])))
+      [else
+       (list (* xbase (/ x1 gcdn)) (* ybase (/ y1 gcdn)))])))
 
 ; Return offset of starts around in n step
+;
+;   * * * * *  step = 2
+;   *       *
+;   *   @   *
+;   *       *
+;   * * * * *
 (define (stars-around step)
   (define l '())
   (for* ([a (list (- step) step)]
@@ -43,9 +45,10 @@
 (define stars-around-table
   (map stars-around (range 1 input-max)))
 
-(define stars-around-lineoff-table
+(define stars-around-line-step-table
   (map (λ (t) (map step-on-line t)) stars-around-table))
 
+; Strar weight: 0 visable, 1 invisable
 (define (star-is-visable x y)
   (= 0 (stage-weight-get x y)))
 
@@ -58,21 +61,16 @@
                       [y (+ (second pos) (second poff))])
                   (if (and (stage-obj-is x y WALL)
                            (star-is-visable x y))
-                      (list (list (list x y) poff pos loff))
+                      (list (list (list x y) poff loff))
                       '())))
               (list-ref stars-around-table (sub1 step))
-              (list-ref stars-around-lineoff-table (sub1 step))
+              (list-ref stars-around-line-step-table (sub1 step))
               )))
 
-(define (stars-on-line pline)
+(define (check-stars-on-line pline)
   (let* ([pos (first pline)]
          [poff (second pline)]
-         [mpos (third pline)]
-         [loff (fourth pline)]
-         [mx (first mpos)]
-         [my (second mpos)]
-         [px (first pos)]
-         [py (second pos)]
+         [loff (third pline)]
          [xoff (first loff)]
          [yoff (second loff)])
     (let loop ([x (+ (first pos) xoff)]
@@ -112,9 +110,10 @@
 
            (for-each
             (λ (step)
-              (map stars-on-line (find-stars-around pos step)))
+              (map check-stars-on-line (find-stars-around pos step)))
             (range 1 h))
 
+           ; Strar weight: 0 visable, 1 invisable
            (let ([v (- (path-len) (stage-weight-total) 1)])
              (when #f
                (when (path-equal pos '(11 13))
@@ -129,7 +128,7 @@
                  (dump-stage-weight)))
              v))
          paths))
-  ;(find-m)
+
   (apply max (find-m))
   )
 
