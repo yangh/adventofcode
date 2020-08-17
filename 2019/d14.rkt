@@ -117,7 +117,7 @@
         (cond
           [(> ore ore-max)
            (loop min (half mid max))]
-          [(< (- ore-max ore) ore-base)           
+          [(< (- ore-max ore) ore-base)
            (displayln (format "It makes ~a FUELs by ~a OREs" mid ore-max))]
           [else
            (loop (half min mid) max)]))))
