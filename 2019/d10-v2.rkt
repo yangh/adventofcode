@@ -82,6 +82,12 @@
             (stage-weight-set! x y 1)))
         (loop (+ x xoff) (+ y yoff))))))
 
+; Max step to check
+(define (max-step pos)
+  (let ([x (abs (first pos))]
+        [y (abs (second pos))])
+    (max x y (- h x) (- v y))))
+
 (define (test in)
   (define input (input-load-lines in))
   (define v (length input))
@@ -108,10 +114,11 @@
     (map (λ (pos)
            (stage-weight-reset)
 
+           ;(displayln (format "Max step: ~a" (max-step pos)))
            (for-each
             (λ (step)
               (map check-stars-on-line (find-stars-around pos step)))
-            (range 1 h))
+            (range 1 (max-step pos)))
 
            ; Strar weight: 0 visable, 1 invisable
            (let ([v (- (path-len) (stage-weight-total) 1)])
