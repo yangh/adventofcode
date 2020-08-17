@@ -86,4 +86,5 @@
 
   (for-each displayln input))
 
+; Works for 10-1 input data only, the algo is wrong
 (test "10-1")
