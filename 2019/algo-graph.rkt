@@ -86,8 +86,15 @@
 (define EMPT 4)
 (define stage-strs (list  "#" "." "@" "D" " "))
 
+(define (char->block c)
+  (cond
+    [(char=? c #\#) WALL]
+    [(char=? c #\.) ROAD]
+    [else EMPT]))
+
 ; Width, Height
-(define h 50)
+(define init-h 50)
+(define h init-h)
 (define v h)
 
 (define (set-h! n) (set! h n))
@@ -110,13 +117,35 @@
   (let ([idx (+ x (* h y))])
     (vector-set! stage-weight idx
                  (sub1 (vector-ref stage-weight idx)))))
+
+(define (stage-weight-get x y)
+  (vector-ref stage-weight (+ x (* y h))))
+
 (define (stage-weight-set! x y w)
   (let ([idx (+ x (* h y))])
     (vector-set! stage-weight idx w)))
 
+(define (stage-weight-reset)
+  (vector-fill! stage-weight 0))
+
+(define (stage-reset)
+  (vector-fill! stage EMPT))
+
 ; Set stage data
 (define (stage-set! x y c)
   (vector-set! stage (+ x (* h y)) c))
+
+(define (stage-set-char! x y c)
+  (stage-set! x y (char->block c)))
+
+(define (stage-pos-valid x y)
+  (and (>= x 0) (< x h)
+       (>= y 0) (< y v)))
+
+(define (stage-obj-is x y obj)
+  (and (>= x 0) (< x h)
+       (>= y 0) (< y v)
+       (= obj (vector-ref stage (+ x (* y h))))))
 
 ; Find all open dirs in types in a list of
 ;  '(weight dir)
@@ -145,6 +174,10 @@
        (set! dir d)))
    (cdr dirs))
   (second dir))
+
+; Stage weight sum
+(define (stage-weight-total)
+  (foldl + 0 (vector->list stage-weight)))
 
 (define (dump-stage [delay 0] [show-droid #f])
   ; Print cabinet
