@@ -109,6 +109,7 @@
 
 ; Find all open dirs in types in a list of
 ;  '(weight dir)
+; TODO: Check if x/y is valid
 (define (find-dir-open-at x y dir-types)
   (foldl
    (lambda (dir result)

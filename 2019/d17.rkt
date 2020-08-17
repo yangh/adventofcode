@@ -17,6 +17,7 @@
 
 (send ic load-code input)
 
+; Put the map in the middle of the stage
 (define xy-init 2)
 (define x xy-init)
 (define y xy-init)
@@ -49,19 +50,21 @@
                  (send ic is-iowait?)))
     (loop)))
 
+(define (alignment-params pos)
+  (let* ([px (first pos)]
+         [py (second pos)]
+         [orig-x (- px xy-init)]
+         [orig-y (- py xy-init)]
+         [dirs (find-dir-open-at px py (list WALL))])
+    ;(displayln (format "Check pos: ~a" pos))
+    (cond
+      [(= 4 (length dirs))
+       (ddisplayln (format "Intersection: ~a, ~a" orig-x orig-y))
+       (stage-set! px py OXYG)
+       (* orig-x orig-y)]
+      [else 0])))
+
 ; Part 1: sum of the alignment parameters
-(foldl + 0
-       (map (λ (pos)
-              (let ([px (first pos)]
-                    [py (second pos)])
-                ;(displayln (format "Check pos: ~a" pos))
-                (let ([dirs (find-dir-open-at px py (list WALL))])
-                  (cond
-                    [(= 4 (length dirs))
-                     (ddisplayln (format "Intersection: ~a, ~a" (- px xy-init) (- py xy-init)))
-                     (stage-set! px py OXYG)
-                     (* (- px xy-init) (- py xy-init))]
-                    [else 0]))))
-            paths))
+(foldl + 0 (map alignment-params paths))
 
 ;(dump-stage)
