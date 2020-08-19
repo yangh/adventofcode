@@ -61,17 +61,16 @@
                       [y (+ (second pos) (second poff))])
                   (if (and (stage-obj-is x y WALL)
                            (star-is-visable x y))
-                      (list (list (list x y) poff loff))
+                      (list (list (list x y) loff))
                       '())))
               (list-ref stars-around-table (sub1 step))
               (list-ref stars-around-line-step-table (sub1 step))
               )))
 
 (define (check-stars-on-line pline)
-  (let* ([pos (first pline)]
-         [poff (second pline)]
-         [loff (third pline)]
-         [xoff (first loff)]
+  (let* ([pos  (first  pline)]
+         [loff (second pline)]
+         [xoff (first  loff)]
          [yoff (second loff)])
     (let loop ([x (+ (first pos) xoff)]
                [y (+ (second pos) yoff)])
@@ -133,15 +132,93 @@
                            paths)
                  (stage-weight-set! (first pos) (second pos) 3)
                  (dump-stage-weight)))
-             v))
+             (list v pos)))
          paths))
 
-  (apply max (find-m))
+  ;(apply max (find-m))
+  (first (sort (find-m) (λ (a b) (> (first a) (first b)))))
   )
 
-(test "10-1")
-(test "10-2")
-(test "10-3")
-(test "10-4")
-(test "10-5")
-(test "10")
+;(test "10-1")
+;(test "10-2")
+;(test "10-3")
+;(test "10-4")
+;(test "10-5")
+
+; Part 1
+(define m-station (test "10"))
+(displayln m-station)
+
+; Part 2
+(define (stars-in-step pos n)
+  (let* ([x (first pos)]
+         [y (second pos)])
+    (append*
+     (map (λ (off)
+            (list (+ x off) (- y n)))
+          (range 0 n))
+     (map (λ (off)
+            (list (+ x n) (+ y off)))
+          (range (- n) n))
+     (map (λ (off)
+            (list (+ x off) (+ y n)))
+          (range n (- n) -1))
+     (map (λ (off)
+            (list (- x n) (+ y off)))
+          (range n (- n) -1))
+     (map (λ (off)
+            (list (+ x off) (- y n)))
+          (range (- n) 0))
+     '(())
+     )))
+
+;(stars-in-step '(10 10) 1)
+;(stars-in-step '(10 10) 2)
+(define (list-shiftl ll n)
+  (let-values ([(r l) (split-at ll n)])
+    (append* l r '(()))))
+
+(define m-station-pos (second m-station))
+
+; Starts on the border, shift start to the position of the Instant
+; Monitor Station
+(define pob (list-shiftl (stars-in-step '(10 10) 10) (- (first m-station-pos) 10)))
+(define pob-steps
+  (let ([x (first m-station-pos)]
+        [y (second m-station-pos)])
+    (map (λ (p)
+           (step-on-line (list (- (first p) x) (- (second p) y))))
+         pob)))
+
+(define (vaporize-star-on-line pline)
+  (let* ([pos  (first  pline)]
+         [loff (second pline)]
+         [xoff (first  loff)]
+         [yoff (second loff)])
+    (let loop ([x (+ (first pos) xoff)]
+               [y (+ (second pos) yoff)])
+      (cond
+        [(stage-pos-valid x y)
+         (let ([is-star (stage-obj-is x y WALL)])
+           (ddisplayln (format "Checkt ~a ~a (~a) for ~a" x y is-star pline))
+           (cond
+             [is-star
+              (stage-set! x y ROAD)
+              1]
+             [else
+              (loop (+ x xoff) (+ y yoff))]))]
+        [else 0]))))
+
+(define v-stars 0)
+
+(let loop ([off-idx 0])
+  (let ([ret (vaporize-star-on-line (list m-station-pos (list-ref pob-steps off-idx)))])
+    (set! v-stars (+ ret v-stars))
+    (when (= ret 1)
+      (displayln (format "Star: ~a th" v-stars))
+      (dump-stage 0.1))
+    (cond
+      [(= v-stars 200)
+       (displayln (format "200th star: ~a" (list-ref pob-steps off-idx)))]
+      [else
+       (loop (modulo (add1 off-idx) (length pob-steps)))])))
