@@ -153,88 +153,11 @@
 (displayln (format "Monitor station: ~a" m-station))
 
 ; Part 2
-(define (stars-in-step pos n)
-  (let* ([x (first pos)]
-         [y (second pos)])
-    (append*
-     (map (λ (off)
-            (list (+ x off) (- y n)))
-          (range 0 n))
-     (map (λ (off)
-            (list (+ x n) (+ y off)))
-          (range (- n) n))
-     (map (λ (off)
-            (list (+ x off) (+ y n)))
-          (range n (- n) -1))
-     (map (λ (off)
-            (list (- x n) (+ y off)))
-          (range n (- n) -1))
-     (map (λ (off)
-            (list (+ x off) (- y n)))
-          (range (- n) 0))
-     '(())
-     )))
-
-;(stars-in-step '(10 10) 1)
-;(stars-in-step '(10 10) 2)
-(define (list-shiftl ll n)
-  (let-values ([(r l) (split-at ll n)])
-    (append* l r '(()))))
-
-(define m-station-pos (second m-station))
-
-; Starts on the border, shift start to the position of the Instant
-; Monitor Station
-(define pob (list-shiftl (stars-in-step '(10 10) 10) (- (first m-station-pos) 10)))
-(define pob-steps
-  (let ([x (first m-station-pos)]
-        [y (second m-station-pos)])
-    (map (λ (p)
-           (step-on-line (list (- (first p) x) (- (second p) y))))
-         pob)))
-
-(define (vaporize-star-on-line pline)
-  (let* ([pos  (first  pline)]
-         [loff (second pline)]
-         [xoff (first  loff)]
-         [yoff (second loff)])
-    (let loop ([x (+ (first pos) xoff)]
-               [y (+ (second pos) yoff)])
-      (cond
-        [(stage-pos-valid x y)
-         (let ([is-star (stage-obj-is x y WALL)])
-           (ddisplayln (format "Checkt ~a ~a (~a) for ~a" x y is-star pline))
-           (cond
-             [is-star
-              (stage-set! x y ROAD)
-              1]
-             [else
-              (loop (+ x xoff) (+ y yoff))]))]
-        [else 0]))))
-
-(define v-stars 0)
-
-(define (avo)
-  (let loop ([off-idx 0])
-    (let ([ret (vaporize-star-on-line (list m-station-pos (list-ref pob-steps off-idx)))])
-      (set! v-stars (+ ret v-stars))
-      (when (= ret 1)
-        (displayln (format "Star: ~a th" v-stars))
-        ;(dump-stage 0.1)
-        )
-      (cond
-        [(= v-stars 200)
-         (displayln (format "200th star: ~a" (list-ref pob-steps off-idx)))]
-        [else
-         (loop (modulo (add1 off-idx) (length pob-steps)))]))))
-
-
 (define (distance p1 p2)
   (let ([x1 (first p1)]
         [y1 (second p1)]
         [x2 (first p2)]
         [y2 (second p2)])
-    ;(displayln (format "~a ~a ~a ~a" x1 y1 x2 y2))
     (sqrt (+ (* (- x2 x1) (- x2 x1))
              (* (- y2 y1) (- y2 y1))))))
 
@@ -260,8 +183,10 @@
    (λ (a b)
      (cond
        [(= (first a) (first b))
+        ; 2nd order by distance
         (< (second a) (second b))]
        [else
+        ; 1st order by tangent
         (< (first a) (first b))]))))
 
 ; Calculate tangent, distance of stars in each quadrant
@@ -305,4 +230,3 @@
        (stage-set! (first (third s)) (second (third s)) OXYG)
        ;(dump-stage 0.3)
        (loop idx (add1 count) (first s) (remove s l))])))
-  
