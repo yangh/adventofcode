@@ -18,9 +18,10 @@
       [(= 0 yoff) (list xbase 0)]
       [(= x1 y1)  (list xbase ybase)]
       [else
-       (list (* xbase (/ x1 gcdn)) (* ybase (/ y1 gcdn)))])))
+       (list (* xbase (/ x1 gcdn))
+             (* ybase (/ y1 gcdn)))])))
 
-; Return offset of starts around in n step
+; Return offset of stars around in n step
 ;
 ;   * * * * *  step = 2
 ;   *       *
@@ -41,7 +42,7 @@
 (define input-max 32)
 
 ; Fast lookup table
-; (poff, line-step-off)
+; (pos-offset, step-on-line)
 (define stars-around-table
   (map stars-around (range 1 input-max)))
 
@@ -53,7 +54,7 @@
   (= 0 (stage-weight-get x y)))
 
 ; Return starts around pos as list of
-; ((x, y) (x-off, y-off))
+; ((x, y) step-on-line)
 (define (find-stars-around pos step)
   (foldl append '()
          (map (λ (poff loff)
@@ -67,6 +68,8 @@
               (list-ref stars-around-line-step-table (sub1 step))
               )))
 
+; Check and mark star as invisible if it's blocked
+;  (behind the first visible start in the same line)
 (define (check-stars-on-line pline)
   (let* ([pos  (first  pline)]
          [loff (second pline)]
@@ -147,7 +150,7 @@
 
 ; Part 1
 (define m-station (test "10"))
-(displayln m-station)
+(displayln (format "Monitor station: ~a" m-station))
 
 ; Part 2
 (define (stars-in-step pos n)
@@ -211,14 +214,95 @@
 
 (define v-stars 0)
 
-(let loop ([off-idx 0])
-  (let ([ret (vaporize-star-on-line (list m-station-pos (list-ref pob-steps off-idx)))])
-    (set! v-stars (+ ret v-stars))
-    (when (= ret 1)
-      (displayln (format "Star: ~a th" v-stars))
-      (dump-stage 0.1))
+(define (avo)
+  (let loop ([off-idx 0])
+    (let ([ret (vaporize-star-on-line (list m-station-pos (list-ref pob-steps off-idx)))])
+      (set! v-stars (+ ret v-stars))
+      (when (= ret 1)
+        (displayln (format "Star: ~a th" v-stars))
+        ;(dump-stage 0.1)
+        )
+      (cond
+        [(= v-stars 200)
+         (displayln (format "200th star: ~a" (list-ref pob-steps off-idx)))]
+        [else
+         (loop (modulo (add1 off-idx) (length pob-steps)))]))))
+
+
+(define (distance p1 p2)
+  (let ([x1 (first p1)]
+        [y1 (second p1)]
+        [x2 (first p2)]
+        [y2 (second p2)])
+    ;(displayln (format "~a ~a ~a ~a" x1 y1 x2 y2))
+    (sqrt (+ (* (- x2 x1) (- x2 x1))
+             (* (- y2 y1) (- y2 y1))))))
+
+;(distance (list 0 0) (list 3 4))
+;(distance (list 11 11) (list 11 0))
+
+(define (xarc p1 p2 which arcvf)
+  (let  ([x1 (first p1)]
+         [y1 (second p1)]
+         [x2 (first p2)]
+         [y2 (second p2)])
     (cond
-      [(= v-stars 200)
-       (displayln (format "200th star: ~a" (list-ref pob-steps off-idx)))]
+      [(which x1 y1 x2 y2)
+       (arcvf x1 y1 x2 y2)]
+      [else -1])))
+
+(define (stars-in-which which arcvf)
+  (sort
+   (filter (λ (e) (>= (first e) 0))
+           (let ([m-pos (second m-station)])
+             (map (λ (p) (list (xarc m-pos p which arcvf) (distance m-pos p) p))
+                  (remove m-pos paths))))
+   (λ (a b)
+     (cond
+       [(= (first a) (first b))
+        (< (second a) (second b))]
+       [else
+        (< (first a) (first b))]))))
+
+; Calculate tangent, distance of stars in each quadrant
+;  return a sorted list by quadrant/tangent/distance
+;     y^
+;      | a
+;      |---. p
+;      |  /
+;    b | / c (distance)
+;      |/
+;      +-------> x
+;
+(define stars-in-circle-order
+  (append
+   ; NE
+   (stars-in-which (λ (x1 y1 x2 y2) (and (>= x2 x1) (> y1 y2)))
+                   (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
+   ; SE
+   (stars-in-which (λ (x1 y1 x2 y2) (and (>= y2 y1) (> x2 y1)))
+                   (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))
+   ; SW
+   (stars-in-which (λ (x1 y1 x2 y2) (and (<= x2 x1) (< y1 y2)))
+                   (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
+   ; NW
+   (stars-in-which (λ (x1 y1 x2 y2) (and (<= y2 y1) (< x2 y1)))
+                   (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))))
+
+; Vaporize star in clock wise order
+(let loop ([idx 0]
+           [count 1]
+           [prev -1]
+           [l stars-in-circle-order])
+  (let ([s (list-ref l idx)])
+    (cond
+      [(= prev (first s))
+       (loop (add1 idx) count prev l)]
+      [(= count 200)
+       (displayln (format "200th: ~a = ~a" s (+ (* 100 (first (third s))) (second (third s)))))]
       [else
-       (loop (modulo (add1 off-idx) (length pob-steps)))])))
+       (ddisplayln (format "vaporized: ~a ~a ~a ~a" idx count prev s))
+       (stage-set! (first (third s)) (second (third s)) OXYG)
+       ;(dump-stage 0.3)
+       (loop idx (add1 count) (first s) (remove s l))])))
+  
