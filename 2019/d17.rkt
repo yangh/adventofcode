@@ -22,6 +22,15 @@
 (define x xy-init)
 (define y xy-init)
 
+; Vacuum robot
+(define va-robot (droid 0 0 NORTH))
+
+(define (update-vacuum-robot x y dir)
+  (stage-set! x y DROD)
+  (set-droid-x! va-robot x)
+  (set-droid-y! va-robot y)
+  (set-droid-dir! va-robot dir))
+
 ; Explore the map
 (let loop ()
   (let ([n (intcode-run)])
@@ -33,10 +42,14 @@
                 (path-add x y)]
       [(= n 46) (display ".")
                 (stage-set! x y ROAD)]
-      [(= n 94) (display "^")]
-      [(= n 62) (display ">")]
-      [(= n 60) (display "<")]
-      [(= n 118) (display "v")]
+      [(= n 94) (display "^")
+                (update-vacuum-robot x y NORTH)]
+      [(= n 62) (display ">")
+                (update-vacuum-robot x y EAST)]
+      [(= n 60) (display "<")
+                (update-vacuum-robot x y WEST)]
+      [(= n 118) (display "v")
+                 (update-vacuum-robot x y SOUTH)]
       [else     (display "*")])
     ; Update x, y
     (cond
@@ -60,7 +73,7 @@
     (cond
       [(= 4 (length dirs))
        (ddisplayln (format "Intersection: ~a, ~a" orig-x orig-y))
-       (stage-set! px py OXYG)
+       ;(stage-set! px py OXYG)
        (* orig-x orig-y)]
       [else 0])))
 
@@ -68,3 +81,5 @@
 (foldl + 0 (map alignment-params paths))
 
 ;(dump-stage)
+
+

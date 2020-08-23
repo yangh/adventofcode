@@ -72,11 +72,14 @@
 
 ; -----------------
 
+; A Droid on the stage, with it's own direction
+(struct droid (x y dir) #:mutable #:transparent)
+
 ; Direction
-(define mn 1) ; North
-(define ms 2) ; South
-(define mw 3) ; West
-(define me 4) ; East
+(define NORTH 1) ; North
+(define SOUTH 2) ; South
+(define WEST  3) ; West
+(define EAST  4) ; East
 
 ; Stage blocks index
 (define WALL 0)
