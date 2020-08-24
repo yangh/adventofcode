@@ -126,7 +126,7 @@
     (define (number-at pos) (vector-ref codev pos))
 
     ; Raw set on memory
-    (define/public (value-set! pos value)
+    (define/public (memory-set! pos value)
       (vector-set! codev pos value))
 
     ; Load parameters in 0/1/2 mode
@@ -194,18 +194,18 @@
                 [value (pop-input)]
                 [mode  (instrc-p1 intr)]
                 [dest  (if (= mode 2) (+ rbase addr) addr)]) ; Relative mode since day 9
-           (value-set! dest value)
+           (memory-set! dest value)
            (debuginfo (format "Load input: [~a] = ~a" dest value)))]))
 
-    (define (cmpv func v1 v2 dst) (value-set! dst (if (func v1 v2) 1 0)))
+    (define (cmpv func v1 v2 dst) (memory-set! dst (if (func v1 v2) 1 0)))
     (define (jmp-if dst condition) (when condition (jump dst)))
 
     ; Micro code supported by the CPU
     (define opcodev
       (vector ;Name Int Params Micocode
        (opcode "Hlt" 0 0 (lambda () (cpu-halt)))
-       (opcode "Add" 1 3 (lambda () (value-set! r3 (+ r1 r2))))
-       (opcode "Mul" 2 3 (lambda () (value-set! r3 (* r1 r2))))
+       (opcode "Add" 1 3 (lambda () (memory-set! r3 (+ r1 r2))))
+       (opcode "Mul" 2 3 (lambda () (memory-set! r3 (* r1 r2))))
        (opcode "Set" 3 1 (lambda () (load-input)))
        (opcode "Out" 4 1 (lambda () (set-output r1)))
        (opcode "Jnz" 5 2 (lambda () (jmp-if r2 (not (= r1 0)))))
@@ -218,6 +218,7 @@
       (displayln (format "Regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a ~a" intr pc r1 r2 r3 r4 rbase exp jmp)))
 
     (define/public (dump)
+      (displayln "Intcode - Dump:")
       (dump-cpu)
       (displayln (format "State: ~a" (state->string state)))
       (displayln (format "Input: ~a" int-input))
