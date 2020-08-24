@@ -6,6 +6,8 @@
 ;   2. Find open paths, select by weight
 ;   3. ...
 ;
+; Used in day 17
+;
 (provide (all-defined-out))
 
 ; Path --------------------
@@ -14,6 +16,7 @@
 (define (path-reset) (set! paths '()))
 (define (path-empty?) (= 0 (length paths)))
 (define (path-push a) (set! paths (append (list a) paths)))
+(define (path-remove p) (set! paths (remove p paths)))
 (define (path-peak) (car paths))
 (define (path-peak2) (car (cdr paths)))
 (define (path-len) (length paths))
@@ -58,6 +61,16 @@
         ))
 
 (define move-delta move-delta1)
+
+; Return move delta of a dir
+(define (move-delta-of-dir dir)
+  (let ([deltas (filter (λ (m) (= dir (list-ref m 2))) move-delta)])
+    (cond
+      [(= 1 (length deltas))
+       (first deltas)]
+      [else
+       (displayln (format "Unkown dir: ~a, ~a" dir deltas))
+       #f])))
 
 (define (set-move-clock-wise)
   (set! move-delta move-delta1))
