@@ -126,7 +126,7 @@
     (define (number-at pos) (vector-ref codev pos))
 
     ; Raw set on memory
-    (define (value-set! pos value)
+    (define/public (value-set! pos value)
       (vector-set! codev pos value))
 
     ; Load parameters in 0/1/2 mode
@@ -156,7 +156,7 @@
     (define int-input '())
 
     (define/public (set-input n)
-      (set! int-input (cons n int-input))
+      (set! int-input (append int-input (list n)))
       (debuginfo (format "Add input: ~a, queue: ~a" n int-input))
       ; Mark state as ready to run
       (set! state RUNNING))
@@ -215,8 +215,14 @@
        (opcode "Rbs" 9 1 (lambda () (update-rbs r1)))))
 
     (define (dump-cpu)
-      (debuginfo (format "regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a"
-                         (instrc-intr intr) pc r1 r2 r3 r4 exp jmp)))
+      (displayln (format "Regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a ~a" intr pc r1 r2 r3 r4 rbase exp jmp)))
+
+    (define/public (dump)
+      (dump-cpu)
+      (displayln (format "State: ~a" (state->string state)))
+      (displayln (format "Input: ~a" int-input))
+      (displayln (format "Output: ~a" int-output))
+      )
 
     ; CPU ALU
     (define (cpu-run)
