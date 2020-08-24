@@ -145,6 +145,8 @@
 
 ;(displayln steps)
 
+; Compress steps into paths
+(path-reset)
 (define cnt 0)
 (for-each (λ (s)
             (cond
@@ -163,10 +165,7 @@
 (displayln (reverse paths))
 
 (define (steps-to-ascii steps)
-  (map (λ (s)
-         (cond
-           [(char? s) (char->integer s)]
-           [else s]))
+  (map char->integer
        (string->list (string-replace steps " " ","))))
 
 ;(steps-to-ascii (reverse paths))
@@ -199,7 +198,7 @@
   (send ic load-code (first (input-load-lines 17)))
   (send ic set-debug #f)
   ; Reinit for Part2
-  (send ic value-set! 0 2)
+  (send ic memory-set! 0 2)
   (send ic set-pause-on-output #t)
 
   (define (run-to-end)
