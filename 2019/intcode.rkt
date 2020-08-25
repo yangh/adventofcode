@@ -152,7 +152,7 @@
       ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" (instrc-intr intr) r1 r2 r3))
       )
 
-    ; Input, queued, FILO, not thread safely
+    ; Input, queued, FIFO, not thread safely
     (define int-input '())
 
     (define/public (set-input n)

@@ -14,8 +14,8 @@
    (lambda (a)
      (send ic load-code input) ; Assume (reset) called when load code
      (send ic set-pause-on-output #t)
-     (send ic set-input o)
      (send ic set-input a)
+     (send ic set-input o)
      (send ic run)
      (set! o (send ic get-output)))
    (map string->number (string-split amps ",")))
