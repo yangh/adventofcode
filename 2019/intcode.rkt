@@ -141,14 +141,20 @@
     ; Support 0/1/2 mode only for first 2 parameters
     ; The output (3rd) parameter only support 1/2 mode
     (define (load-parameters psize)
-      (when (> psize 0)
-        (set! r1 (load-parameter 1 (instrc-p1 intr))) ; At least 1 param
-        (when (> psize 1)
-          (set! r2 (load-parameter 2 (instrc-p2 intr))))
-        (when (> psize 2)
-          (set! r3 (number-at (+ pc 3)))  ; Result, always immediate
-          (when (= 2 (instrc-p3 intr))    ; Relative mode since day 9
-            (set! r3 (+ rbase r3)))))
+      (cond
+        [(= psize 1)                                     ; 1 param
+         (set! r1 (load-parameter 1 (instrc-p1 intr)))]
+        [(= psize 2)                                     ; 2 params
+         (set! r1 (load-parameter 1 (instrc-p1 intr)))
+         (set! r2 (load-parameter 2 (instrc-p2 intr)))]
+        [(= psize 3)                                     ; 3 params
+         (set! r1 (load-parameter 1 (instrc-p1 intr)))
+         (set! r2 (load-parameter 2 (instrc-p2 intr)))
+         (set! r3 (number-at (+ pc 3)))  ; Result, always immediate
+         (when (= 2 (instrc-p3 intr))    ; Relative mode since day 9
+           (set! r3 (+ rbase r3)))]
+        [else
+         (debuginfo (format "Unkown params size: ~a" psize))])
       ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" (instrc-intr intr) r1 r2 r3))
       )
 
@@ -214,16 +220,13 @@
        (opcode "Eq"  8 3 (lambda () (cmpv = r1 r2 r3)))
        (opcode "Rbs" 9 1 (lambda () (update-rbs r1)))))
 
-    (define (dump-cpu)
-      (displayln (format "Regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a ~a" intr pc r1 r2 r3 r4 rbase exp jmp)))
-
+    ; Dump Intcode registers/state/I/O
     (define/public (dump)
       (displayln "Intcode - Dump:")
-      (dump-cpu)
+      (displayln (format "Regs: ~a, ~a, ~a ~a ~a ~a, ~a ~a ~a" intr pc r1 r2 r3 r4 rbase exp jmp))
       (displayln (format "State: ~a" (state->string state)))
       (displayln (format "Input: ~a" int-input))
-      (displayln (format "Output: ~a" int-output))
-      )
+      (displayln (format "Output: ~a" int-output)))
 
     ; CPU ALU
     (define (cpu-run)
@@ -234,10 +237,8 @@
              [mcode (opcode-mcode opc)]
              [psize (opcode-psize opc)])
         (load-parameters psize)
-        ;(dump-cpu)
         (mcode)
         (when (or (= state RUNNING) ; IOWAIT will retry after resumed
                   (= state PAUSE))  ; PAUSE but will continue later
-          (move-pc psize))
-        ))
+          (move-pc psize))))
     ))

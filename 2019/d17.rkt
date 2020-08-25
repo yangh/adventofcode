@@ -77,7 +77,7 @@
        (* orig-x orig-y)]
       [else 0])))
 
-; Part 1: sum of the alignment parameters
+; Part 1: sum of the alignment parameters, 2788
 (foldl + 0 (map alignment-params paths))
 
 ;(dump-stage)
