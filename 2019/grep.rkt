@@ -2,7 +2,7 @@
 ;
 ; Usage: grep [key-word] [file-pattern]
 ;
-; grep files in currently directory
+; grep files in the currently directory
 ;
 
 (define txt-filter "set-input")
@@ -10,6 +10,7 @@
 
 (define cmd-options (current-command-line-arguments))
 
+; Command line options
 (cond
   [(= (vector-length cmd-options) 1)
    (set! txt-filter (vector-ref cmd-options 0))]
@@ -19,27 +20,27 @@
 
 (displayln (format "Search text ~a in files ~a" txt-filter file-filter))
 
+; Grep file
 (define (grep file)
   (let ([lines (port->lines (open-input-file file))])
-    (reverse
-     (foldl append '()
-            (map
-             (λ (lno line)
-               (if (regexp-match txt-filter line)
-                   (list (format "~a:~a" lno line))
-                   '()))
-             (range 1 (add1 (length lines)))
-             lines)))))
+    (foldr append '()
+           (map
+            (λ (lno line)
+              (if (regexp-match txt-filter line)
+                  (list (format "~a: ~a" lno line))
+                  '()))
+            (range 1 (add1 (length lines)))
+            lines))))
 
+; Iterate files in the current directory
 (for-each
  (λ (p)
-   (when (regexp-match file-filter (path->string p))
-     ; Regular file only
-     (when (file-exists? p)
-       (let ([ret (grep p)])
-         (when (> (length ret) 0)
-           (displayln (format "> ~a" (path->string p)))
-           (map displayln ret)
-           (displayln "")))
-       )))
+   (when (and (file-exists? p)
+              (regexp-match file-filter (path->string p)))
+     (let ([lines (grep p)])
+       (when (not (empty? lines))
+         (displayln (format "> ~a" (path->string p)))
+         (map displayln lines)
+         (displayln "")))
+     ))
  (directory-list))
