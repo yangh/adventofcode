@@ -149,7 +149,11 @@
 
 ; Set stage data
 (define (stage-set! x y c)
-  (vector-set! stage (+ x (* h y)) c))
+  (when (stage-pos-valid x y)
+    (vector-set! stage (+ x (* h y)) c)))
+
+(define (stage-set-all! c)
+  (vector-fill! stage c))
 
 (define (stage-set-char! x y c)
   (stage-set! x y (char->block c)))
