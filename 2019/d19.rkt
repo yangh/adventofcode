@@ -116,18 +116,18 @@
 
 ; We scan in backward, we start from 300,1100 because
 ; each square found in the 50x50 range has a similar
-; distance: 3, 11
+; distance: 3, 10
 
 ; Square 100 position guess
 (define x100 300)
-(define y100 1100)
+(define y100 1000)
 (define sq100 100)
 
 (define (part2)
   (set! pre-line-start-x 1)
   (set! pre-line-end-x (+ x100 sq100))
 
-  (for ([by (range 1000 900 -1)])
+  (for ([by (range y100 (- y100 sq100) -1)])
     (define line-start #f)
     (define line-end #f)
 
@@ -158,11 +158,11 @@
     (define found #t)
 
     ; Find all square on the line
-    (for ([bx (range (- pre-line-end-x 99) pre-line-start-x -1)]
+    (for ([bx (range (add1 (- pre-line-end-x sq100)) pre-line-start-x -1)]
           #:break (not found))
       (let* ([x (+ bx x-offset)]
              [y (+ by y-offset)]
-             [ret (is-square-n x y 100)])
+             [ret (is-square-n x y sq100)])
         (cond
           [(not ret)
            (set! found #f)]
