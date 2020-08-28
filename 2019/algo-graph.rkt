@@ -21,6 +21,7 @@
 (define (path-peak2) (car (cdr paths)))
 (define (path-len) (length paths))
 (define (path-dump-len) (displayln (format "Path len: ~a" (path-len))))
+(define (path-has p) (member p paths))
 
 (define (path-pop)
   (let ([a (car paths)])
@@ -125,6 +126,11 @@
 
 ; Stage
 (define stage (make-vector (* h v) EMPT))
+
+(define (stage-init init-h init-v c)
+  (set! h init-h)
+  (set! v init-v)
+  (set! stage (make-vector (* h v) c)))
 
 ; How many times we stepped on this point
 (define stage-weight (make-vector (* h v) 0))
