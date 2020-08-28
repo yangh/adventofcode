@@ -32,9 +32,7 @@
   (stage-init space-w space-h ROAD)
   (set! pre-line-end-x space-w)
 
-  (for ([by (range 0 space-h)]
-        #:break (and (> pre-line-start-x 0)
-                     (> (- pre-line-end-x pre-line-start-x) 100)))
+  (for ([by (range 0 space-h)])
     (define line-start #f)
     (define line-end #f)
 
@@ -116,16 +114,25 @@
        (= 1 (intcode-run (+ x (sub1 n)) y))
        (= 1 (intcode-run x (+ y (sub1 n))))))
 
+; We scan in backward, we start from 300,1100 because
+; each square found in the 50x50 range has a similar
+; distance: 3, 11
+
+; Square 100 position guess
+(define x100 300)
+(define y100 1100)
+(define sq100 100)
+
 (define (part2)
   (set! pre-line-start-x 1)
-  (set! pre-line-end-x 400)
+  (set! pre-line-end-x (+ x100 sq100))
 
   (for ([by (range 1000 900 -1)])
     (define line-start #f)
     (define line-end #f)
 
     ; Find line start
-    (for ([bx (range (sub1 pre-line-start-x) 300)]
+    (for ([bx (range (sub1 pre-line-start-x) x100)]
           #:break (and line-start))
       (let* ([x (+ bx x-offset)]
              [y (+ by y-offset)]
@@ -162,15 +169,6 @@
           [else
            (path-add x y)])))
     ))
-
-; We scan in backward, we start from 300,1100 because
-; each square found in the 50x50 range has a similar
-; distance: 3, 11
-
-; Square 100 position
-(define x100 300)
-(define y100 1100)
-(define sq100 100)
 
 ; Part 2, Square 100 at: 261, 980
 (part2)
