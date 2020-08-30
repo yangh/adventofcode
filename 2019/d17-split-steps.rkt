@@ -27,45 +27,47 @@
 ;;;
 
 (define steps '())
-(define (set-steps! s)
-  (set! steps s))
+(define (set-steps! s) (set! steps s))
 
 (define A '())
 (define B '())
 (define C '())
+(define MAIN '())
 
 (define clist '())
 ; The max step clip
 (define clip-max 10)
 
+; List is equal when
+;  1. Each item at same index is same and
+;  2. The list length is equal.
 (define (list-eq? a b)
-  (let ([la (length a)]
-        [lb (length b)])
-    (and (= la lb)
-         (andmap
-          (λ (v1 v2) (eq? v1 v2)) a b))))
+  (and (= (length a) (length b))
+       (andmap (λ (v1 v2) (eq? v1 v2)) a b)))
 
+; Every sub path in the clist is equal?
 (define (clist-is-equal?)
   (andmap
    (λ (idx)
      (list-eq? (list-ref clist idx)
                (list-ref clist (add1 idx))))
-   (range 0 (- (length clist) 1))))
+   (range 0 (sub1 (length clist)))))
 
 ; Find out the max clip for C
-(define (clist-split-check lc)
+(define (clist-split-check cl)
   (ormap (λ (n)
            (cond
-             [(> (modulo (length lc) n) 0) #f]
+             [(> (modulo (length cl) n) 0) #f]
              [else
               (set! clist '())
-              ;(displayln (format "Clip ~a: ~a" n lc))
-              (for ([idx (range 0 (/ (length lc) n))])
-                (set! clist (append clist (list (take (drop lc (* idx n)) n)))))
+              ;(displayln (format "Clip ~a: ~a" n cl))
+              (for ([idx (range 0 (/ (length cl) n))])
+                (set! clist (append clist (list (take (drop cl (* idx n)) n)))))
               (set! C (first clist))
               (clist-is-equal?)]))
          (range clip-max 0 -2)))
 
+; Check if we found a valid C, or need to split into small one
 (define (recheck-clist)
   (cond
     [(= 0 (length clist)) #t]
@@ -77,6 +79,7 @@
     [(clist-is-equal?) (clist-split-check C)]
     [else #f]))
 
+; Return the pos of the sub path, or #f if not found
 (define (find-steps s a)
   (let ([send (- (length s) (length a))]
         [la (length a)])
@@ -90,6 +93,8 @@
         [else
          (loop (+ sstart 2))]))))
 
+; Remove sub path from steps
+; If save-c is #t, save remaind paths into clist
 (define (drop-steps s a save-c)
   (let loop ([steps-new s])
     (let ([ret (find-steps steps-new a)])
@@ -162,8 +167,6 @@
         [(and (>= (length s) lc) (list-eq? C (take s lc)))
          (loop (drop s lc) (append prog (list #\C)))]
         [else prog]))))
-
-(define MAIN '())
 
 (define (clips-find)
   (find-good-clips)

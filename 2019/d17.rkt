@@ -10,13 +10,12 @@
 (define ic (new Intcode%))
 (send ic set-pause-on-output #t)
 (send ic set-debug #f)
+(send ic load-code input)
 
 ; Intcode run
 (define (intcode-run)
   (send ic run)
   (send ic get-output))
-
-(send ic load-code input)
 
 ; Put the map in the middle of the stage
 (define xy-init 2)
