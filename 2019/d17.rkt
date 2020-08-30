@@ -3,6 +3,7 @@
 (require "intcode.rkt")
 (require "utils.rkt")
 (require "algo-graph.rkt")
+(require "d17-split-steps.rkt")
 
 (define input (first (input-load-lines 17)))
 
@@ -22,6 +23,8 @@
 (define x xy-init)
 (define y xy-init)
 
+(define new-line 10)
+
 ; Vacuum robot
 (define va-robot (droid 0 0 NORTH))
 
@@ -36,7 +39,7 @@
   (let ([n (intcode-run)])
     ; Print the map
     (cond
-      [(= n 10) (displayln "")] ; New line
+      [(= n new-line) (displayln "")] ; New line
       [(= n 35) (display "#")
                 (stage-set! x y WALL)
                 (path-add x y)]
@@ -53,7 +56,7 @@
       [else     (display "*")])
     ; Update x, y
     (cond
-      [(= n 10)
+      [(= n new-line)
        (set! x xy-init)
        (set! y (add1 y))]
       [else
@@ -73,14 +76,11 @@
     (cond
       [(= 4 (length dirs))
        (ddisplayln (format "Intersection: ~a, ~a" orig-x orig-y))
-       ;(stage-set! px py OXYG)
        (* orig-x orig-y)]
       [else 0])))
 
 ; Part 1: sum of the alignment parameters, 2788
 (foldl + 0 (map alignment-params paths))
-
-;(dump-stage)
 
 (define (path-to-turn-letter robot m-delta)
   (let* ([dir-idx (list-ref (move-delta-of-dir (droid-dir robot)) 3)]
@@ -92,6 +92,7 @@
       [(= m-idx (modulo (sub1 dir-idx) 4)) #\L]
       [else #\X])))
 
+; Move robot forward
 (define (robot-move robot m-delta)
   (let ([nx (+ (droid-x robot) (list-ref m-delta 0))]
         [ny (+ (droid-y robot) (list-ref m-delta 1))]
@@ -133,65 +134,51 @@
 
 ;(find-direct-path va-robot)
 
-(define steps '())
-
+; Find all road
 (let loop ()
   (when (> (path-len) 0)
     ;(dump-stage 0.05 #t)
-    (set! steps (append steps (list (find-direct-path va-robot))))
+    (set-steps! (append steps (list (find-direct-path va-robot))))
     (loop)))
 
-;(dump-stage 0.05 #t)
-
-;(displayln steps)
-
 ; Compress steps into paths
-(path-reset)
-(define cnt 0)
-(for-each (λ (s)
-            (cond
-              [(or (char=? s #\R) (char=? s #\L))
-               (cond
-                 [(= cnt 0) (set! cnt 1)
-                            (path-push s)]
-                 [else (path-push cnt)
-                       (path-push s)
-                       (set! cnt 1)])]
-              [else (set! cnt (add1 cnt))]))
-          steps)
-(path-push cnt)
+(define (steps-compress)
+  (path-reset)
+  (define cnt 0)
+  (for-each (λ (s)
+              (cond
+                [(or (char=? s #\R) (char=? s #\L))
+                 (cond
+                   [(= cnt 0) (set! cnt 1)
+                              (path-push s)]
+                   [else (path-push cnt)
+                         (path-push s)
+                         (set! cnt 1)])]
+                [else (set! cnt (add1 cnt))]))
+            steps)
+  (path-push cnt)
+  (reverse paths))
 
 ; Full steps to wall through all the paths
-(displayln (reverse paths))
+(set-steps! (steps-compress))
 
-(define (steps-to-ascii steps)
-  (map char->integer
-       (string->list (string-replace steps " " ","))))
+; Found sub function A/B/C
+(clips-find)
 
-;(steps-to-ascii (reverse paths))
-;;;
-; TODO: How find out 3 paths to cover all the steps by algorithm?
-;
-;(R 12 L 8 L 4 L 4      < A
-;   L 8 R 6 L 6         < B
-; R 12 L 8 L 4 L 4
-;   L 8 R 6 L 6
-; L 8 L 4 R 12 L 6 L 4  < C
-; R 12 L 8 L 4 L 4
-; L 8 L 4 R 12 L 6 L 4
-; R 12 L 8 L 4 L 4
-; L 8 L 4 R 12 L 6 L 4
-;   L 8 R 6 L 6)
-;
-; Main:
-;   A B A B C A C A C B
-;;;
+; Convert '(A B C 12) to "A , B , C , 1 2"
+(define (steps-to-ascii s)
+  (let ([l (length s)])
+    (foldl (λ (c idx result)
+             (append result
+                     (if (number? c)
+                         (string->list (number->string c))
+                         (list c))
+                     (if (< idx (sub1 l))
+                         (list #\,) '())))
+           '() s (range 0 l))))
 
-(define A "R 12 L 8 L 4 L 4")
-(define B "L 8 R 6 L 6")
-(define C "L 8 L 4 R 12 L 6 L 4")
-(define MAIN "A B A B C A C A C B")
-(define VIDEO "n")
+; Enable video output, may lead CPU over hot issue -_-
+(define VIDEO (list #\n))
 
 ;(steps-to-ascii A)
 (define (part2)
@@ -211,8 +198,9 @@
       (when (not (send ic is-halt?)) (loop))))
   
   (define (load-program prog)
+    (ddisplayln (format "Load prog: ~a" prog))
     (for-each (λ (c) (send ic set-input c))
-              (steps-to-ascii prog))
+              (map char->integer (steps-to-ascii prog)))
     ; progame end by newline '10
     (send ic set-input 10))
 
@@ -221,7 +209,7 @@
   (load-program B)
   (load-program C)
   (load-program VIDEO)
-  (send ic dump)
+  ;(send ic dump)
   (run-to-end)
   )
 
