@@ -55,6 +55,7 @@
 
 ; Find out the max clip for C
 (define (clist-split-check cl)
+  ; TODO: do we need to check the length of cl first?
   (ormap (λ (n)
            (cond
              [(> (modulo (length cl) n) 0) #f]
@@ -71,12 +72,11 @@
 (define (recheck-clist)
   (cond
     [(= 0 (length clist)) #t]
-    [(= 1 (length clist))
-     (set! C (first clist))
+    [(or (= 1 (length clist))
+         (clist-is-equal?))
      (if (> (length C) clip-max)
          (clist-split-check C)
          #t)]
-    [(clist-is-equal?) (clist-split-check C)]
     [else #f]))
 
 ; Return the pos of the sub path, or #f if not found
@@ -102,7 +102,7 @@
         [(and ret)
          (cond
            [(and save-c (> ret 0))
-            ; Save ramind clips
+            ; Save sub path remained
             (set! clist (append clist (list (take steps-new ret))))
             (set! C (first clist))
             (loop (drop steps-new (+ ret (length a))))]
@@ -115,9 +115,9 @@
 ;
 ; Define A/B from the head/tail of the steps,
 ; then remove A/B sub paths from the steps,
-; save reaminded usb paths into clist,
+; save reaminded sub paths into clist,
 ; check if the clist is valid sub path (len < 10)
-; or repeated valid sub path.
+; or repeat of valid sub path.
 ;
 (define (good-path a b)
   (set! clist '())

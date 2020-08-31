@@ -166,22 +166,22 @@
 
 ; Convert '(A B C 12) to "A , B , C , 1 2"
 (define (steps-to-ascii s)
-  (let ([l (length s)])
+  (let ([len (length s)])
     (foldl (λ (c idx result)
              (append result
                      (if (number? c)
                          (string->list (number->string c))
                          (list c))
-                     (if (< idx (sub1 l))
+                     (if (< idx (sub1 len))
                          (list #\,) '())))
-           '() s (range 0 l))))
+           '() s (range 0 len))))
 
 ; Enable video output, may lead CPU over hot issue -_-
 (define VIDEO (list #\n))
 
 ;(steps-to-ascii A)
 (define (part2)
-  (send ic load-code (first (input-load-lines 17)))
+  (send ic load-code input)
   (send ic set-debug #f)
   ; Reinit for Part2
   (send ic memory-set! 0 2)
@@ -191,7 +191,7 @@
     (let loop ()
       (let ([ret (intcode-run)])
         (cond
-          [(= 10 ret)  (displayln "")]
+          [(= ret new-line) (displayln "")]
           [(< ret 255) (display (integer->char ret))]
           [else (displayln ret)]))
       (when (not (send ic is-halt?)) (loop))))
@@ -200,8 +200,8 @@
     (ddisplayln (format "Load prog: ~a" prog))
     (for-each (λ (c) (send ic set-input c))
               (map char->integer (steps-to-ascii prog)))
-    ; progame end by newline '10
-    (send ic set-input 10))
+    ; progame end by newline
+    (send ic set-input new-line))
 
   (load-program MAIN)
   (load-program A)

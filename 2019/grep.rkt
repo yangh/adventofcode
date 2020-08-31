@@ -5,7 +5,7 @@
 ; grep files in the currently directory
 ;
 
-(define txt-filter "set-input")
+(define text-filter "set-input")
 (define file-filter ".rkt")
 
 (define cmd-options (current-command-line-arguments))
@@ -13,12 +13,12 @@
 ; Command line options
 (cond
   [(= (vector-length cmd-options) 1)
-   (set! txt-filter (vector-ref cmd-options 0))]
+   (set! text-filter (vector-ref cmd-options 0))]
   [(= (vector-length cmd-options) 2)
-   (set! txt-filter (vector-ref cmd-options 0))
+   (set! text-filter (vector-ref cmd-options 0))
    (set! file-filter (vector-ref cmd-options 1))])
 
-(displayln (format "Search text ~a in files ~a" txt-filter file-filter))
+(displayln (format "Search text ~a in files ~a" text-filter file-filter))
 
 (define last-line-count 0)
 
@@ -29,7 +29,7 @@
     (foldr append '()
            (map
             (λ (lno line)
-              (if (regexp-match txt-filter line)
+              (if (regexp-match text-filter line)
                   (list (format "~a: ~a" lno line))
                   '()))
             (range 1 (add1 (length lines)))
@@ -57,7 +57,7 @@
      ))
  (directory-list))
 
-(displayln (format "--(~a)--(~a)--" file-filter txt-filter))
+(displayln (format "--(~a)--(~a)--" file-filter text-filter))
 (displayln (format "File matched: ~a" file-count))
 (displayln (format "Line matched: ~a" line-count))
 (displayln (format "Total lines: ~a" total-line-count))
