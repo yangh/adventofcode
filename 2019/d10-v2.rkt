@@ -183,7 +183,7 @@
          (< (second a) (second b))  ; 2nd order by distance
          ))))
 
-; Calculate tangent, distance of stars in each quadrant
+; Calculate tangent, distance of stars in each quadrant in clockwise order
 ;  return a list of star sorted by quadrant/tangent/distance
 ;  star: (list tangent distance position)
 ;     y^
@@ -194,7 +194,7 @@
 ;      |/
 ;      +-------> x
 ;
-(define stars-in-circle-order
+(define stars-in-clockwise-order
   (append
    ; NE
    (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= x2 x1) (< y2 y1)))
@@ -213,7 +213,7 @@
 (let loop ([idx 0]
            [count 1]
            [prev-tan -1]
-           [stars stars-in-circle-order])
+           [stars stars-in-clockwise-order])
   (let* ([star (list-ref stars idx)]
          [stan (first star)]
          [pos  (third star)])
