@@ -197,16 +197,16 @@
 (define stars-in-circle-order
   (append
    ; NE
-   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= x2 x1) (> y1 y2)))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= x2 x1) (< y2 y1)))
                       (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
    ; SE
-   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= y2 y1) (> x2 y1)))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= y2 y1) (> x2 x1)))
                       (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))
    ; SW
-   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (<= x2 x1) (< y1 y2)))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (<= x2 x1) (> y2 y1)))
                       (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
    ; NW
-   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (<= y2 y1) (< x2 y1)))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (<= y2 y1) (< x2 x1)))
                       (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))))
 
 ; Vaporize star in clock wise order
