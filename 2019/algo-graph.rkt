@@ -24,9 +24,10 @@
 (define (path-has p) (member p paths))
 
 (define (path-pop)
-  (let ([a (car paths)])
-    (set! paths (cdr paths))
-    a))
+  (if (empty? paths) #f
+      (let ([a (car paths)])
+        (set! paths (cdr paths))
+        a)))
 
 (define (path-equal a b)
   (and (= (list-ref a 0) (list-ref b 0))

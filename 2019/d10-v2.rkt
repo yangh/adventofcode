@@ -124,17 +124,6 @@
 
            ; Strar weight: 0 visable, 1 invisable
            (let ([v (- (path-len) (stage-weight-total) 1)])
-             (when #f
-               (when (path-equal pos '(11 13))
-                 (displayln (format "Check for start ~a, ~a" pos v))
-                 (for-each (λ (p)
-                             (let ([x (first p)]
-                                   [y (second p)])
-                               (when (= 0 (stage-weight-get x y))
-                                 (stage-weight-set! x y 2))))
-                           paths)
-                 (stage-weight-set! (first pos) (second pos) 3)
-                 (dump-stage-weight)))
              (list v pos)))
          paths))
 
@@ -164,33 +153,39 @@
 ;(distance (list 0 0) (list 3 4))
 ;(distance (list 11 11) (list 11 0))
 
-(define (xarc p1 p2 which arcvf)
+; Return tangent of a start if it's in the quadrant, else return -1
+(define (star-tangent p1 p2 in-quadrant? star-tan)
   (let  ([x1 (first p1)]
          [y1 (second p1)]
          [x2 (first p2)]
          [y2 (second p2)])
     (cond
-      [(which x1 y1 x2 y2)
-       (arcvf x1 y1 x2 y2)]
+      [(in-quadrant? x1 y1 x2 y2)
+       (star-tan x1 y1 x2 y2)]
       [else -1])))
 
-(define (stars-in-which which arcvf)
+; Return a list of stars (list tan dist pos) in given quadrant
+(define (stars-in-quadrant which-q? star-tan)
   (sort
-   (filter (λ (e) (>= (first e) 0))
-           (let ([m-pos (second m-station)])
-             (map (λ (p) (list (xarc m-pos p which arcvf) (distance m-pos p) p))
-                  (remove m-pos paths))))
+   (filter
+    ; Positive tangent only, which from a given quadrant determined by which-q?
+    (λ (e) (>= (first e) 0))
+    (let ([m-pos (second m-station)])
+      (map (λ (pos)
+             (list (star-tangent m-pos pos which-q? star-tan)
+                   (distance m-pos pos)
+                   pos))
+           (remove m-pos paths))))
+   ; Sort function
    (λ (a b)
-     (cond
-       [(= (first a) (first b))
-        ; 2nd order by distance
-        (< (second a) (second b))]
-       [else
-        ; 1st order by tangent
-        (< (first a) (first b))]))))
+     (if (not (= (first a) (first b)))
+         (< (first a) (first b))    ; 1st order by tangent
+         (< (second a) (second b))  ; 2nd order by distance
+         ))))
 
 ; Calculate tangent, distance of stars in each quadrant
-;  return a sorted list by quadrant/tangent/distance
+;  return a list of star sorted by quadrant/tangent/distance
+;  star: (list tangent distance position)
 ;     y^
 ;      | a
 ;      |---. p
@@ -202,31 +197,36 @@
 (define stars-in-circle-order
   (append
    ; NE
-   (stars-in-which (λ (x1 y1 x2 y2) (and (>= x2 x1) (> y1 y2)))
-                   (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= x2 x1) (> y1 y2)))
+                      (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
    ; SE
-   (stars-in-which (λ (x1 y1 x2 y2) (and (>= y2 y1) (> x2 y1)))
-                   (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (>= y2 y1) (> x2 y1)))
+                      (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))
    ; SW
-   (stars-in-which (λ (x1 y1 x2 y2) (and (<= x2 x1) (< y1 y2)))
-                   (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (<= x2 x1) (< y1 y2)))
+                      (λ (x1 y1 x2 y2) (abs (/ (- x2 x1) (- y2 y1)))))
    ; NW
-   (stars-in-which (λ (x1 y1 x2 y2) (and (<= y2 y1) (< x2 y1)))
-                   (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))))
+   (stars-in-quadrant (λ (x1 y1 x2 y2) (and (<= y2 y1) (< x2 y1)))
+                      (λ (x1 y1 x2 y2) (abs (/ (- y2 y1) (- x2 x1)))))))
 
 ; Vaporize star in clock wise order
 (let loop ([idx 0]
            [count 1]
-           [prev -1]
-           [l stars-in-circle-order])
-  (let ([s (list-ref l idx)])
+           [prev-tan -1]
+           [stars stars-in-circle-order])
+  (let* ([star (list-ref stars idx)]
+         [stan (first star)]
+         [pos  (third star)])
     (cond
-      [(= prev (first s))
-       (loop (add1 idx) count prev l)]
+      ; Skip stars in the same tagent with previous star
+      [(= prev-tan stan)
+       (loop (add1 idx) count prev-tan stars)]
       [(= count 200)
-       (displayln (format "200th: ~a = ~a" s (+ (* 100 (first (third s))) (second (third s)))))]
+       ; Part 2: position of 200th start: 8, 6
+       (displayln (format "200th: ~a = ~a" star (+ (* 100 (first pos)) (second pos))))]
       [else
-       (ddisplayln (format "vaporized: ~a ~a ~a ~a" idx count prev s))
-       (stage-set! (first (third s)) (second (third s)) OXYG)
+       (ddisplayln (format "Vaporized: ~a ~a ~a ~a" idx count prev-tan star))
+       (stage-set! (first pos) (second pos) OXYG)
        ;(dump-stage 0.3)
-       (loop idx (add1 count) (first s) (remove s l))])))
+       ; No need to increase idx because current star will be removed from the list
+       (loop idx (add1 count) stan (remove star stars))])))
