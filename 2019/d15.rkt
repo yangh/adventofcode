@@ -34,7 +34,12 @@
       (when (not (= obj WALL))
         (set! x nx)
         (set! y ny)
-        (path-add x y))
+        ; Fallback if needed
+        ;  when the path is ABCD, if we go back to C, then pop out the D
+        (if (and (> (path-len) 1)
+                 (path-equal (path-peak2) (list x y)))
+            (path-pop)
+            (path-add x y)))
       (stage-weight-sub1 nx ny))))
 
 ; Intcode move
@@ -113,10 +118,10 @@
          (let ([ret (move dirs)])
            (when (not (= OXYG ret))
              (set-current-droid-pos! x y)
-             (dump-stage 0.1 #t)
+             ;(dump-stage 0.1 #t)
              (loop)))]))))
 
-; Part 1
+; Part 1, step count: 210
 (define (part1)
   (set-move-clock-wise)
   (go)
@@ -135,18 +140,20 @@
 (define (pos-move-to x y dir)
   (list (+ x (first dir)) (+ y (second dir))))
 
+; Fill exits open dirs, and find out all new open dirs
 (define (fill-oxygen)
   (define new-dirs '())
-  (for-each (λ (o)
-              (let* ([x (first o)]
-                     [y (second o)]
-                     [idx (+ x (* y h))]
-                     [dirs (find-dir-open-at x y (list ROAD))])
-                ;(displayln (format "Open dirs at ~a ~a: ~a" x y dirs))
-                (vector-set! stage idx OXYG)
-                (for-each (λ (d) (set! new-dirs (append new-dirs (list (pos-move-to x y (second d))))))
-                          dirs)))
-            open-dirs)
+  (for-each
+   (λ (dir)
+     (let* ([x (first dir)]
+            [y (second dir)]
+            [idx (+ x (* y h))]
+            [dirs (find-dir-open-at x y (list ROAD))])
+       ;(displayln (format "Open dirs at ~a ~a: ~a" x y dirs))
+       (vector-set! stage idx OXYG)
+       (for-each (λ (d) (set! new-dirs (append new-dirs (list (pos-move-to x y (second d))))))
+                 dirs)))
+   open-dirs)
   (set! open-dirs new-dirs))
 
 (define (go-fill)
@@ -158,13 +165,12 @@
        (fill-oxygen)
        (when (not (empty? open-dirs))
          (path-push (list (length open-dirs) open-dirs)))
-       (when (= 0 (modulo (path-len) 1))
+       (when (= 0 (modulo (path-len) 1000))
          (dump-stage 0.1))
        (loop)])))
 
 ;Try to find all road & wall
-; Round 2 to explore full map
-; WARN: Assume the max branch number is 2.
+; Round 2 to explore full map, assume the max branch number is 2.
 (define (part2)
   ; Depends on part 1
   (path-reset)
@@ -172,8 +178,8 @@
   (reset-xy)
   (dump-stage)
   (path-dump-len)
-
   (path-reset)
   (go-fill))
 
+; Part2, full filed in steps: 290
 (part2)

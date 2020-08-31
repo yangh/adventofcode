@@ -33,14 +33,7 @@
   (and (= (list-ref a 0) (list-ref b 0))
        (= (list-ref a 1) (list-ref b 1))))
 
-(define (path-add x y)
-  (cond
-    [(path-empty?) (path-push (list x y))]
-    [(and (> (path-len) 1)
-          (path-equal (path-peak2) (list x y)))
-     ;(displayln (format "Path fallback: ~a ~a" x y))
-     (path-pop)]
-    [else (path-push (list x y))]))
+(define (path-add x y) (path-push (list x y)))
 
 ; ----------------
 
