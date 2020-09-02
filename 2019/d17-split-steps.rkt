@@ -108,10 +108,11 @@
         [(list-eq? a (drop (take s (+ sstart la)) sstart))
          sstart]
         [else
-         (loop (+ sstart 2))]))))
+         (loop (+ sstart clip-min))]))))
 
-; Remove sub path from steps
+; Remove sub path from steps recursively
 ; If save-c is #t, save remaind paths into clist
+; return remained steps in s
 (define (drop-steps s a save-c)
   (let loop ([steps-new s])
     (let ([ret (find-steps steps-new a)])
@@ -137,11 +138,12 @@
 ; or repeat of valid sub path.
 ;
 (define (find-great-clips)
-  (let loop ([la 2]
-             [lb 2]
+  (let loop ([la clip-min]
+             [lb clip-min]
              [s steps])
     (set! clist '())
     (ddisplayln (format "Find clip: ~a ~a" la lb))
+
     (let ([l (length s)])
       (set! A (take s la))
       (set! B (drop s (- l lb)))
@@ -149,7 +151,7 @@
       (cond
         [(list-eq? A B)
          (displayln (format "Remove tail B: ~a" B))
-         (loop la 2 (take s (- l lb)))]
+         (loop la clip-min (take s (- l lb)))]
         ; Continue search even if A/B is similar
         ;[(or (list-has? A B)
         ;     (list-has? B A))
@@ -166,8 +168,10 @@
                (displayln (format "Found clip: A: ~a, B: ~a, C: ~a" A B C))
                (cond
                  [(and (= lb clip-max) (= la clip-max)) #f]
-                 [(and (= lb clip-max) (< la clip-max)) (loop (+ la 2) 2 s)]
-                 [else (loop la (+ lb 2) s)])))])
+                 [(and (= lb clip-max) (< la clip-max))
+                  (loop (+ la clip-min) clip-min s)]
+                 [else
+                  (loop la (+ lb clip-min) s)])))])
       )))
 
 (define (convert-steps-to-prog)
