@@ -37,6 +37,13 @@
 (define clist '())
 ; The max step clip
 (define clip-max 10)
+(define clip-min 2)
+
+(define (clips-reset)
+  (set! A '())
+  (set! B '())
+  (set! C '())
+  (set! clist '()))
 
 ; List is equal when
 ;  1. Each item at same index is same and
@@ -44,6 +51,16 @@
 (define (list-eq? a b)
   (and (= (length a) (length b))
        (andmap (λ (v1 v2) (eq? v1 v2)) a b)))
+
+; List A/B has B/A
+;  1. Lenght of A/B is different
+;  2. A is a sub set of B at position 0 or vis versa
+(define (list-has? a b)
+  (let* ([la (length a)]
+         [lb (length b)]
+         [len (min la lb)])
+    (and (not (= la lb))
+         (list-eq? (take a len) (take b len)))))
 
 ; Every sub path in the clist is equal?
 (define (clist-is-equal?)
@@ -54,16 +71,16 @@
    (range 0 (sub1 (length clist)))))
 
 ; Find out the max clip for C
-(define (clist-split-check cl)
+(define (clist-split-check cc)
   ; TODO: do we need to check the length of cl first?
   (ormap (λ (n)
            (cond
-             [(> (modulo (length cl) n) 0) #f]
+             [(> (modulo (length cc) n) 0) #f]
              [else
               (set! clist '())
               ;(displayln (format "Clip ~a: ~a" n cl))
-              (for ([idx (range 0 (/ (length cl) n))])
-                (set! clist (append clist (list (take (drop cl (* idx n)) n)))))
+              (for ([idx (range 0 (/ (length cc) n))])
+                (set! clist (append clist (list (take (drop cc (* idx n)) n)))))
               (set! C (first clist))
               (clist-is-equal?)]))
          (range clip-max 0 -2)))
@@ -119,37 +136,39 @@
 ; check if the clist is valid sub path (len < 10)
 ; or repeat of valid sub path.
 ;
-(define (good-path a b)
-  (set! clist '())
-  (let loop ([la a]
-             [lb b]
+(define (find-great-clips)
+  (let loop ([la 2]
+             [lb 2]
              [s steps])
+    (set! clist '())
+    (ddisplayln (format "Find clip: ~a ~a" la lb))
     (let ([l (length s)])
       (set! A (take s la))
       (set! B (drop s (- l lb)))
-      ;(displayln (format "Try A ~a, B ~a" A B))
+      (ddisplayln (format "Try A ~a, B ~a" A B))
       (cond
-        [(eq? A B)
-         (set! B (drop s (- l lb lb)))
-         (loop la lb (take s (- l lb)))]
+        [(list-eq? A B)
+         (displayln (format "Remove tail B: ~a" B))
+         (loop la 2 (take s (- l lb)))]
+        ; Continue search even if A/B is similar
+        ;[(or (list-has? A B)
+        ;     (list-has? B A))
+        ; (displayln (format "Intersect of A/B: ~a, ~a" A B))
+        ; #f]
+        ;[(or (find-steps A B)
+        ;     (find-steps B A))
+        ; (displayln (format "Included of A/B: ~a, ~a" A B))
+        ; #f]
         [else
-         (drop-steps (drop-steps steps A #f) B #t)
-         (recheck-clist)])
+         (let ([sremaind (drop-steps (drop-steps steps A #f) B #t)])
+           (if (and (= (length sremaind) 0)
+                    (recheck-clist))
+               (displayln (format "Found clip: A: ~a, B: ~a, C: ~a" A B C))
+               (cond
+                 [(and (= lb clip-max) (= la clip-max)) #f]
+                 [(and (= lb clip-max) (< la clip-max)) (loop (+ la 2) 2 s)]
+                 [else (loop la (+ lb 2) s)])))])
       )))
-
-(define (find-good-clips)
-  (define found #f)
-  (for* ([la (range 2 12 2)]
-         [lb (range 2 12 2)]
-         #:break (and found))
-    (set! clist '())
-    (when (and (good-path la lb))
-      (set! found #t)
-      ;(displayln (format "Clip: ~a ~a" la lb))
-      (displayln (format "Found clip: A: ~a, B: ~a, C: ~a" A B C)))))
-
-;(good-path 8 6)
-;(find-good-clips)
 
 (define (convert-steps-to-prog)
   (let ([la (length A)]
@@ -166,18 +185,35 @@
          (loop (drop s lb) (append prog (list #\B)))]
         [(and (>= (length s) lc) (list-eq? C (take s lc)))
          (loop (drop s lc) (append prog (list #\C)))]
-        [else prog]))))
+        [else
+         (displayln (format "Failed to match ~a with A/B/C" s))
+         (displayln (format "A: ~a, B: ~a, C: ~a" A B C))
+         prog]))))
 
 (define (clips-find)
-  (find-good-clips)
+  (find-great-clips)
   (set! MAIN (convert-steps-to-prog))
   (ddisplayln (format "Main in module: ~a" MAIN)))
 
+(define (test-steps s)
+  (set-steps! s)
+  (clips-reset)
+  (clips-find)
+  (displayln (format "Prog: ~a" (convert-steps-to-prog))))
+
 (module+ main #f
-  (set-steps! '(R 12 L 8 L 4 L 4 L 8 R 6 L 6 R 12 L 8
+  (test-steps '(R 12 L 8 L 4))
+  (test-steps '(R 12 L 8 L 4 L 4))
+  (test-steps '(R 12 L 8 L 4 L 4 L 8 R 6 L 6 R 12 L 8
                   L 4 L 4 L 8 R 6 L 6 L 8 L 4 R 12
                   L 6 L 4 R 12 L 8 L 4 L 4 L 8 L 4
                   R 12 L 6 L 4 R 12 L 8 L 4 L 4 L 8
                   L 4 R 12 L 6 L 4 L 8 R 6 L 6))
-  (clips-find)
-  (displayln (format "Prog: ~a" (convert-steps-to-prog))))
+
+  (test-steps '(R 12 L 8 L 4 L 4 L 8 R 6 L 6 R 12 L 8
+                  L 4 L 4 L 8 R 6 L 6 L 8 L 4 R 12
+                  L 6 L 4 R 12 L 8 L 4 L 4 L 8 L 4
+                  R 12 L 6 L 4 R 12 L 8 L 4 L 4 L 8
+                  L 4 R 12 L 6 L 4 L 8 R 6 L 6
+                  R 12 L 8 L 4 L 4))
+  )
