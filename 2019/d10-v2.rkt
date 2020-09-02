@@ -56,17 +56,15 @@
 ; Return starts around pos as list of
 ; ((x, y) step-on-line)
 (define (find-stars-around pos step)
-  (foldl append '()
-         (map (λ (poff loff)
-                (let ([x (+ (first pos) (first poff))]
-                      [y (+ (second pos) (second poff))])
-                  (if (and (stage-obj-is x y WALL)
-                           (star-is-visable x y))
-                      (list (list (list x y) loff))
-                      '())))
-              (list-ref stars-around-table (sub1 step))
-              (list-ref stars-around-line-step-table (sub1 step))
-              )))
+  (filter-map
+   (λ (poff loff)
+     (let ([x (+ (first pos) (first poff))]
+           [y (+ (second pos) (second poff))])
+       (and (and (stage-obj-is x y WALL)
+                 (star-is-visable x y))
+            (list (list x y) loff))))
+   (list-ref stars-around-table (sub1 step))
+   (list-ref stars-around-line-step-table (sub1 step))))
 
 ; Check and mark star as invisible if it's blocked
 ;  (behind the first visible start in the same line)

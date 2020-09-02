@@ -171,19 +171,16 @@
 ;  '(weight dir)
 ; TODO: Check if x/y is valid
 (define (find-dir-open-at x y dir-types)
-  (foldl
-   (lambda (dir result)
-     (append result
-             (let* ([nx (+ x (first dir))]
-                    [ny (+ y (second dir))]
-                    [idx (+ nx (* ny h))]
-                    [c (vector-ref stage idx)]
-                    [w2 (vector-ref stage-weight idx)])
-               ;(ddisplayln (format "Find ~a ~a ~a ~a" nx ny c w2))
-               (cond
-                 [(member c dir-types) (list (list (+ c w2) dir))]
-                 [else '()]))))
-   '() move-delta))
+  (filter-map
+   (lambda (dir)
+     (let* ([nx (+ x (first dir))]
+            [ny (+ y (second dir))]
+            [idx (+ nx (* ny h))]
+            [c (vector-ref stage idx)]
+            [w2 (vector-ref stage-weight idx)])
+       ;(ddisplayln (format "Find ~a ~a ~a ~a" nx ny c w2))
+       (and (member c dir-types) (list (+ c w2) dir))))
+   move-delta))
 
 ; Select weightest way
 (define (find-weightest-dir dirs)

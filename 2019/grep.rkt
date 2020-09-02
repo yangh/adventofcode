@@ -20,26 +20,20 @@
 
 (displayln (format "Search text ~a in files ~a" text-filter file-filter))
 
-(define last-line-count 0)
-
-; Grep file
-(define (grep file)
-  (let ([lines (port->lines (open-input-file file))])
-    (set! last-line-count (length lines))
-    (foldr append '()
-           (map
-            (λ (lno line)
-              (if (regexp-match text-filter line)
-                  (list (format "~a: ~a" lno line))
-                  '()))
-            (range 1 (add1 (length lines)))
-            lines))))
-
 ; Match statistics
 (define file-count 0)
 (define line-count 0)
-
 (define total-line-count 0)
+
+; Grep file
+(define (grep file)
+  (let* ([lines (port->lines (open-input-file file))]
+         [len (length lines)])
+    (set! total-line-count (+ total-line-count len))
+    (filter-map (λ (line-num line)
+                  (and (regexp-match text-filter line)
+                       (format "~a: ~a" line-num line)))
+                (range 1 (add1 len)) lines)))
 
 ; Iterate files in the current directory
 (for-each
@@ -47,7 +41,6 @@
    (when (and (file-exists? p)
               (regexp-match file-filter (path->string p)))
      (let ([lines (grep p)])
-       (set! total-line-count (+ last-line-count total-line-count))
        (when (not (empty? lines))
          (set! file-count (add1 file-count))
          (set! line-count (+ line-count (length lines)))

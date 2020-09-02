@@ -70,9 +70,9 @@
                (list-ref clist (add1 idx))))
    (range 0 (sub1 (length clist)))))
 
-; Find out the max clip for C
+; Find out the max sub clip for C
 (define (clist-split-check cc)
-  ; TODO: do we need to check the length of cl first?
+  ; TODO: do we need to check the length of cc first?
   (ormap (λ (n)
            (cond
              [(> (modulo (length cc) n) 0) #f]
