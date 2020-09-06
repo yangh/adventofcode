@@ -13,26 +13,30 @@
 (define (value-at ints pos)
   (vector-ref ints (vector-ref ints pos)))
 
-(define (op3 op ints pos)
-  (vector-set! ints
-               (vector-ref ints (+ pos 3))
-               (op (value-at ints (+ pos 1))
-                   (value-at ints (+ pos 2)))))
+(define (op3 op ram pc)
+  (vector-set! ram
+               (vector-ref ram (+ pc 3))
+               (op (value-at ram (+ pc 1))
+                   (value-at ram (+ pc 2)))))
 
-(define (intcode ints pos)
-  (when (< pos (vector-length ints))
+(define ADD  1)
+(define MULT 2)
+(define HALT 99)
+
+(define (intcode ram pc)
+  (when (< pc (vector-length ram))
     ;(displayln (format "Pos: ~a" pos))
-    (let ([op (vector-ref ints pos)])
+    (let ([op (vector-ref ram pc)])
       (cond
-        [(= op 99) #f]
-        [(= op 1)
-         (op3 + ints pos)
-         (intcode ints (+ pos 4))]
-        [(= op 2)
-         (op3 * ints pos)
-         (intcode ints (+ pos 4))]
+        [(= op HALT) #f]
+        [(= op ADD)
+         (op3 + ram pc)
+         (intcode ram (+ pc 4))]
+        [(= op MULT)
+         (op3 * ram pc)
+         (intcode ram (+ pc 4))]
         [else
-         (displayln (format "Unknown opcode: ~a" (vector-ref ints pos)))]))))
+         (displayln (format "Unknown opcode: ~a" (vector-ref ram pc)))]))))
 
 (define (p1202 in n1 n2)
   (vector-set! in 1 n1)

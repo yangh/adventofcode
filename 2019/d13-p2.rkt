@@ -90,7 +90,7 @@
       (print-cabinet)
 
       (set! round (add1 round))
-      ;(sleep 0.5)
+      (sleep 0.2)
       (paddle-move))
 
     ; TODO: How to stop after nblks = 0 ?

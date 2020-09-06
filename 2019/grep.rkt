@@ -1,10 +1,9 @@
 #lang racket
 ;
-; Usage: grep [key-word] [file-pattern]
+; Grep files in the currently directory
 ;
-; grep files in the currently directory
+;  Usage: grep [key-word] [file-pattern]
 ;
-
 (define text-filter "set-input")
 (define file-filter ".rkt")
 
@@ -46,8 +45,7 @@
          (set! line-count (+ line-count (length lines)))
          (displayln (format "> ~a" (path->string p)))
          (map displayln lines)
-         (displayln "")))
-     ))
+         (displayln "")))))
  (directory-list))
 
 (displayln (format "--(~a)--(~a)--" file-filter text-filter))
