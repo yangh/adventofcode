@@ -18,44 +18,83 @@
          ic)
        (range 0 node-num)))
 
+; Input all package for the node
 (define (node-load-input addr ic)
   (let ([inputs (path-filter (λ (p) (= addr (first p))))])
     (cond
       [(= 0 (length inputs))
-       (send ic set-input -1)]
+       (send ic set-input -1)
+       #f]
       [else
-       (let ([input (first inputs)])
+       (when (< 1 (length inputs))
+         (ddisplayln (format "Input multi packages: ~a" inputs)))
+       ; WARN: The paths is in FILO (reverse order)
+       (for ([input (reverse inputs)])
          (send ic set-input (second input))
          (send ic set-input (third input))
-         (path-remove input))])
-    ))
+         (path-remove input))
+       #t])))
 
-(define addr-255-found #f)
+(define nat-package-found #f)
 
+(define nat-addr 255)
+(define nat-package #f)
+(define nat-sent-pkgs '())
+(define nat-2nd-y-found #f)
+
+; Receive all packages sent out from the node
 (define (node-receive ic)
-  (let ([dst-addr (send ic get-output)]
-        [x ((λ () (send ic run) (send ic get-output)))]
-        [y ((λ () (send ic run) (send ic get-output)))])
-    (when (= dst-addr 255)
-      (displayln (format "~a ~a ~a" dst-addr x y))
-      (set! addr-255-found #t))
-    (path-push (list dst-addr x y))
-    (ddisplayln (format "New package: ~a" (path-peak)))))
-
-(define (find-package-to-255)
   (let loop ()
+    (let ([dst-addr (send ic get-output)]
+          [x ((λ () (send ic run) (send ic get-output)))]
+          [y ((λ () (send ic run) (send ic get-output)))])
+      (cond
+        [(= dst-addr nat-addr)
+         (set! nat-package (list 0 x y))
+         (when (not nat-package-found)
+           (displayln (format "First NAT package: ~a" nat-package))
+           (set! nat-package-found #t))]
+        [else
+         (path-push (list dst-addr x y))
+         (ddisplayln (format "New package: ~a" (path-peak)))]))
+    ; Try to run again
+    (send ic run)
+    (when (send ic is-pause?)
+      (ddisplayln "Receive multi packages")
+      (loop))))
+
+(define (find-package break-cond)
+  (let loop ()
+    (define all-node-idle #t)
+
     (for-each
      (λ (addr)
        (let ([ic (list-ref nodes addr)])
          (send ic run)
          (cond
            [(send ic is-iowait?)
-            (node-load-input addr ic)]
+            (when (node-load-input addr ic)
+              (set! all-node-idle #f))]
            [(send ic is-pause?)
-            (node-receive ic)]
-           )))
+            (node-receive ic)])))
      (range 0 node-num))
-    (when (not addr-255-found) (loop))))
+
+    ; Check if network is idle
+    (when (and all-node-idle nat-package)
+      (let ([x (second nat-package)]
+            [y (third nat-package)])
+        ; Prepare activite package for next loop
+        (path-push nat-package)
+        ; check 2nd y
+        (when (member y nat-sent-pkgs)
+          (displayln (format "Found 2nd y: ~a" y))
+          (set! nat-2nd-y-found #t))
+        (set! nat-sent-pkgs (append nat-sent-pkgs (list y)))))
+
+    (when (not (break-cond)) (loop))))
 
 ; Part 1: 255 57557 27182
-(find-package-to-255)
+(find-package (λ () (and nat-package-found)))
+
+; Part 2: 19285
+(find-package (λ () (and nat-2nd-y-found)))

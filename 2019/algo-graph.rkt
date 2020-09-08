@@ -15,6 +15,8 @@
 (define paths '())
 (define (path-reset) (set! paths '()))
 (define (path-empty?) (= 0 (length paths)))
+
+; NOTE: it's FILO
 (define (path-push a) (set! paths (append (list a) paths)))
 (define (path-remove p) (set! paths (remove p paths)))
 (define (path-peak) (car paths))
