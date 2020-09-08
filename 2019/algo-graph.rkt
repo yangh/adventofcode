@@ -35,6 +35,9 @@
 
 (define (path-add x y) (path-push (list x y)))
 
+(define (path-filter filter-func)
+  (filter (λ (p) (and (filter-func p) p)) paths))
+
 ; ----------------
 
 ; Clock wise
