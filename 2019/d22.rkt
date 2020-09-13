@@ -81,7 +81,14 @@
       (- n val)
       (+ n (- card-num val))))
 
+(define (shuff-cut-r n val)
+  (modulo (+ n val) card-num))
+
 (define card-num-half (truncate (/ card-num 2)))
+
+(define (set-card-num! n)
+  (set! card-num n)
+  (set! card-num-half (truncate (/ card-num 2))))
 
 (define (shuff-new-stack n val)
   (let ([off (- n card-num-half)])
@@ -90,26 +97,82 @@
 (define (shuff-increment n val)
   (modulo (* n val) card-num))
 
-(define (part1-v2)
-  (define pos-2019 2019)
+; TODO: Optimize out of div/mul
+(define (shuff-increment-r n val)
+  (let loop ([x 1])
+    ;(displayln (format "Loop ~a" x))
+    (let ([y (+ n (* card-num x))])
+      (if (= 0 (modulo y val))
+          (/ y val)
+          (loop (add1 x))))))
 
+(define shuffs (shuff-tech->ops 22))
+
+(define pos-orig 2019)
+(define pos-new 2019)
+(define (set-pos! n)
+  (set! pos-orig n)
+  (set! pos-new n))
+
+(define (part1-v2 n)
+  (set-pos! n)
   (for-each (λ (shuff)
               (let ([op (first shuff)]
                     [val (second shuff)])
-                (set! pos-2019 
+                (set! pos-new 
                       (cond
-                        [(= op 0) (shuff-cut pos-2019 val)]
-                        [(= op 1) (shuff-new-stack pos-2019 val)]
-                        [(= op 2) (shuff-increment pos-2019 val)]))
-                (ddisplayln (format "Shuff ~a ~a" shuff pos-2019))
+                        [(= op 0) (shuff-cut pos-new val)]
+                        [(= op 1) (shuff-new-stack pos-new val)]
+                        [(= op 2) (shuff-increment pos-new val)]))
+                ;(ddisplayln (format "Shuff ~a ~a" shuff pos-new))
                 ))
-            (shuff-tech->ops 22))
-
-  (displayln (format "2019 at: ~a" pos-2019)))
+            shuffs)
+  ;(displayln (format "~a at: ~a" pos-orig pos-new))
+  )
 
 ; Part1 v2
-(part1-v2)
+(part1-v2 2019)
+(displayln (format "~a at: ~a" pos-orig pos-new))
 
-(define n2 119315717514047)
-(define nl 101741582076661)
+; Find forward roll back count
+(define (find-fwd-roll-back shuff n)
+  (set-pos! n)
+  (let loop ([idx 1])
+    ;(when (< idx 10) (displayln (format "~a ~a" pos-orig pos-new)))
+    (when (= 0 (modulo idx 10000000)) (display "m") (flush-output))
+    (shuff pos-new)
+    (if (= n pos-new)
+        (displayln (format "Looped after ~a round" idx))
+        (loop (add1 idx)))))
+; Result: each pos will return to orignal after card-num of shuffling
+(find-fwd-roll-back part1-v2 2019)
+
+(define (part1-v2-reverse n)
+  (set-pos! n)
+  (for-each (λ (shuff)
+              (let ([op (first shuff)]
+                    [val (second shuff)])
+                (set! pos-new 
+                      (cond
+                        [(= op 0) (shuff-cut-r pos-new val)]
+                        [(= op 1) (shuff-new-stack pos-new val)]
+                        [(= op 2) (shuff-increment-r pos-new val)]))
+                ;(ddisplayln (format "Shuff ~a ~a" shuff pos-new))
+                ))
+            (reverse shuffs))
+  ;(displayln (format "~a from: ~a" pos-orig pos-new))
+  )
+
+;(displayln "Reverse shuff")
+(part1-v2-reverse 2020)
+(displayln (format "~a from: ~a" pos-orig pos-new))
+(find-fwd-roll-back part1-v2-reverse 2020)
+
+(define card-num-giant 119315717514047)
+(define shufflee-giant 101741582076661)
+
+(define rollback-steps (- card-num-giant shufflee-giant))
+
+;(set-card-num! card-num-giant)
+;(part1-v2-reverse 2020)
 
