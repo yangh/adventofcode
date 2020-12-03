@@ -13,6 +13,7 @@ end
 function T.input(day, part_)
         local lines = {}
         local part = ""
+        local count = 0
 
         if part_ then part = "-" .. part_ end
 
@@ -25,9 +26,10 @@ function T.input(day, part_)
 
         for l in io.lines() do
                 table.insert(lines, l)
+                count = count + 1
         end
 
-        return lines
+        return lines, count
 end
 
 function T.input_lines_to_number(d, p)
