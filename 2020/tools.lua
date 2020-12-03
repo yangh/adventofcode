@@ -11,6 +11,7 @@ local function file_exist(file)
 end
 
 function T.input(day, part_)
+        local lines = {}
         local part = ""
 
         if part_ then part = "-" .. part_ end
@@ -20,10 +21,13 @@ function T.input(day, part_)
 
         if not file_exist(filename) then return nil end
 
-        local f = io.open(filename)
-        io.input(f)
+        io.input(filename)
 
-        return io.lines()
+        for l in io.lines() do
+                table.insert(lines, l)
+        end
+
+        return lines
 end
 
 function T.input_lines_to_number(d, p)
@@ -32,11 +36,22 @@ function T.input_lines_to_number(d, p)
 
         if not lines then return nil end
 
-        for l in lines do
+        for _, l in ipairs(lines) do
                 table.insert(numbers, tonumber(l))
         end
 
         return numbers
+end
+
+function T.fold_lines (lines, func)
+        local count = 0
+        for _, l in ipairs(lines) do
+                if func(l) then
+                        count = count + 1
+                        --print(l)
+                end
+        end
+        return count
 end
 
 return T
