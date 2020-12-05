@@ -71,3 +71,14 @@ end
 local seat_indexes = T.map_lines(lines, exe_line)
 table.sort(seat_indexes, function (a, b) return a > b end)
 print("Max seat index", seat_indexes[1])
+
+--print("All seats ids", I.inspect(seat_indexes))
+
+-- Part 2
+local last_idx = seat_indexes[1]
+for _, id in ipairs(seat_indexes) do
+        if (id - last_idx) == -2 then
+                print("My seat", last_idx - 1, "between", last_idx, id)
+        end
+        last_idx = id
+end
