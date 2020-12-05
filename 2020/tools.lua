@@ -56,4 +56,14 @@ function T.fold_lines (lines, func)
         return count
 end
 
+function T.map_lines (lines, func)
+        local res = {}
+
+        for _, l in ipairs(lines) do
+                table.insert(res, func(l))
+        end
+
+        return res
+end
+
 return T
