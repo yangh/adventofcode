@@ -5,25 +5,29 @@ local lines, count = T.input(5)
 
 local LOWER = 0
 local UPPER = 1
+local BYTE_F = string.byte("F", 1)
+local BYTE_B = string.byte("B", 1)
+local BYTE_L = string.byte("L", 1)
+local BYTE_R = string.byte("R", 1)
 
 local function convert_line(line)
         local rows = {}
         local cols = {}
 
         for i = 1, 7 do
-                local ch = string.sub(line, i, i)
-                if ch == "F" then
+                local ch = string.byte(line, i)
+                if ch == BYTE_F then
                         table.insert(rows, LOWER)
-                elseif ch == "B" then
+                elseif ch == BYTE_B then
                         table.insert(rows, UPPER)
                 end
         end
 
         for i = 8, 10 do
-                local ch = string.sub(line, i, i)
-                if ch == "L" then
+                local ch = string.byte(line, i)
+                if ch == BYTE_L then
                         table.insert(cols, LOWER)
-                elseif ch == "R" then
+                elseif ch == BYTE_R then
                         table.insert(cols, UPPER)
                 end
         end
