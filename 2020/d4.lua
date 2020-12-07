@@ -1,4 +1,3 @@
-
 local I = require("inspect")
 local T = require("tools")
 
@@ -148,13 +147,13 @@ local passport_properties_validor = {
         -- (Passport ID)
         pid = valid_pid,
         -- (Country ID)
-        cid = function ()
-            return true
-        end,
+        cid = function () return true end,
 }
 
 local function passport_valid2(ppt)
-        if not passport_valid(ppt) then return false end
+        if not passport_valid(ppt) then
+                return false
+        end
 
         --print("Valid passport again", I.inspect(ppt))
         for _, k in ipairs(passport_properties) do
