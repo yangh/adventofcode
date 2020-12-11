@@ -5,7 +5,7 @@
 using namespace std;
 
 static Tool T;
-static vector<long> numbers;
+static Numbers numbers;
 
 static bool is_a_preable_num(int idx)
 {
@@ -87,11 +87,7 @@ int main (int argc, char *argv[])
 {
 	Lines lines = T.input(9);
 
-    for (const auto& line: lines) {
-        if (line.length() > 0) {
-            numbers.push_back(stol(line));
-        }
-    }
+    T.lines_to_numbers(lines, numbers);
 
     long invalid_num_idx = find_first_invalid_num(25);
     long invalid_num = numbers[invalid_num_idx];

@@ -7,6 +7,8 @@
 using namespace std;
 
 typedef vector<string> Lines;
+typedef vector<long> Numbers;
+
 typedef int (*Fold_func) (const string &);
 
 class Tool {
@@ -17,11 +19,16 @@ public:
 
     ~Tool() {};
 
-    static Lines input(int day) {
+    static Lines input(int day, int extra = -1) {
         Lines lines;
         stringstream filename;
+        stringstream ext;
 
-        filename << "inputs/" << "d" << day << ".txt";
+        if (extra > 0) {
+            ext << "-" << extra;
+        }
+
+        filename << "inputs/" << "d" << day << ext.str() << ".txt";
         cout << filename.str() << endl;
 
         string str;
@@ -98,5 +105,18 @@ public:
         }
 
         return tokens;
+    }
+
+    static int lines_to_numbers(Lines lines, vector<long> & numbers)
+    {
+        int count = 0;
+
+        for (const auto& line: lines) {
+            if (line.length() > 0) {
+                numbers.push_back(stol(line));
+            }
+            count++;
+        }
+        return count;
     }
 };
