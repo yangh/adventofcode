@@ -84,6 +84,7 @@ int main (int argc, char *argv[])
 	numbers.insert(numbers.begin(), 0);
 	cout << "Multiple of j1 j3 " << multi_jolts_1_3() << endl;
 
+	// TODO: Finsh part 2
 	long comp = composite_jolts();
 	cout << "Composites of jolts " << comp << endl;
 
