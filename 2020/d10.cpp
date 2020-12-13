@@ -61,7 +61,7 @@ static long composite_jolts()
 			} else if (j1 == 3) {
 				compose *= 4;
 			} else if (j1 == 4) {
-				compose *= 8;
+				compose *= 7;
 			}
 			cout << "J " << j1 << ", at " << i << ", compose " << compose << endl;
 
@@ -74,12 +74,11 @@ static long composite_jolts()
 
 int main (int argc, char *argv[])
 {
-	Lines lines = T.input(10, 2);
-	//T.dump_lines(lines, 10);
+	Lines lines = T.input(10, -2);
 
 	T.lines_to_numbers(lines, numbers);
 	sort(numbers.begin(), numbers.end());
-	T.dump_lines(numbers, 32);
+	//T.dump_lines(numbers, 32);
 
 	numbers.insert(numbers.begin(), 0);
 	cout << "Multiple of j1 j3 " << multi_jolts_1_3() << endl;
