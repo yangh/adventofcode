@@ -11,15 +11,21 @@ static Tool T;
 class Bus {
 public:
     int id;
+    int position;
     int period;
     int distance;
     int loop_start;
     int loop_n;
+    int loop_step;
     int start_offset;
+    int id_offset;
 };
 
 ostream& operator<< (ostream& os, const Bus& bus) {
-    os << bus.id << " " << bus.period;
+    os << bus.id;
+    os << " Pos " << bus.position;
+    os << " Period " << bus.period;
+    os << " Loop step " << bus.loop_step;
     return os;
 };
 
@@ -32,9 +38,10 @@ static void parse_buses(const string& line)
     vector<string> tokens = T.string_split(line, ",");
 
     for (const auto& str: tokens) {
-        Bus bus = { id, -1, INT32_MAX, 0, 1, 0 };
+        Bus bus = { id, id, -1, INT32_MAX, 0, 1, 0, 0, 0 };
         if (str != "x") {
             bus.period = stoi(str);
+            bus.loop_step = bus.period;
             bus.distance = bus.period - (first_timestamp % bus.period);
         }
         buses.push_back(bus);
@@ -52,6 +59,11 @@ static bool bus_sort_by_distance(Bus& a, Bus& b)
 static bool bus_sort_by_id(Bus& a, Bus& b)
 {
     return a.id < b.id;
+}
+
+static bool bus_sort_by_loop_step_dec(Bus& a, Bus& b)
+{
+    return a.loop_step > b.loop_step;
 }
 
 static Bus & find_nearest_bus()
@@ -80,28 +92,34 @@ static long bus_lcm(Bus & bus1, Bus & bus2)
 
     int b1 = bus1.period;
     int b2 = bus2.period;
-    int offset_target = bus2.id - bus1.id;
-    int f1 = 1;
+    int offset_target = bus2.position - bus1.position;
+    int step = 1;
+    int point = 0;
     int found = 0;
 
     while (1) {
-        int offset = (f1 * b2) % b1;
-        //cout << "M " << f1 << ", Offset " << offset << endl;
+        point += bus2.loop_step;
+        int offset = point % b1;
+        //cout << "M " << step << ", Offset " << offset;
+        //cout << ", Target " << offset_target << endl;
         if (offset == offset_target) {
             found++;
             //cout << "Found" << endl;
             if (found == 1) {
-                bus2.loop_start = f1;
+                bus2.loop_start = step;
+                bus2.start_offset = bus2.loop_start * bus2.period;
             } else {
-                bus2.loop_n = f1 - bus2.loop_start;
+                bus2.loop_n = step - bus2.loop_start;
+                bus2.loop_step = bus2.loop_n * bus2.period;
                 break;
             }
         }
-        f1++;
+        step++;
     }
 
-    cout << b1 << ", " << b2 << ", m1 " << f1 * b2 - offset_target;
-    cout << ", m2 " << f1 * b2;
+    cout << b1 << ", " << b2 << ", offset " << offset_target;
+    cout << ", m1 " << step * b2 - offset_target;
+    cout << ", m2 " << step * b2;
     cout << ", loop_start " << bus2.loop_start;
     cout << ", loop_n " << bus2.loop_n << endl;
 
@@ -121,29 +139,67 @@ static long long find_first_lcm()
         }
     }
 
-    Bus previous_bus = { -1, 0, 0, 0 , 0};
+    T.dump_lines(valid_buses);
 
-    for (auto& bus : valid_buses) {
-        if (previous_bus.id == -1) {
-            previous_bus =  bus;
-            continue;
-        }
-        bus_lcm(previous_bus, bus);
-        previous_bus = bus;
+    for (int i = 1; i < valid_buses.size(); i++) {
+        bus_lcm(valid_buses[i - 1], valid_buses[i]);
     }
 
+ // part 2 draft, works with d13-2
+ #if 1
+    sort(valid_buses.begin(), valid_buses.end(), bus_sort_by_loop_step_dec);
+    T.dump_lines(valid_buses);
+
+    Bus busmx = valid_buses[0];
+    valid_buses.erase(valid_buses.begin());
+
+    for (auto& bus: valid_buses) {
+        bus.id_offset = busmx.id - bus.id;
+    }
+
+    long start_point = busmx.start_offset;
+    long step = busmx.loop_step;
+    long count = 1;
+
+    while (1) {
+        bool found = true;
+        start_point += step;
+        cout << "Try " << start_point << ", step " << count++ << endl;
+        for (const auto& bus: valid_buses) {
+            if (bus.id_offset > 0) {
+                if (! (bus.id_offset == (start_point % bus.period))) {
+                    found = false;
+                    break;
+                }
+            } else {
+                if (! (0 == (start_point - bus.id_offset) % bus.period)) {
+                    found = false;
+                    break;
+
+                }
+            }
+        }
+        if (found) {
+            cout << "Found " << start_point - (busmx.id - buses[0].id) << endl;
+            break;
+        }
+    }
+#endif
+
+#if 0
     long llcm = 1;
     for (int i = 1; i < valid_buses.size(); i++) {
         llcm = lcm(llcm, valid_buses[i].loop_n);
     }
     cout << "LCM " << llcm << endl;
+#endif
 
     return fisrt_lcm;
 }
 
 int main (int argc, char *argv[])
 {
-	Lines lines = T.input(13, -2);
+	Lines lines = T.input(13, +2);
 	//T.dump_lines(lines, 10);
 
     first_timestamp = stoi(lines[0]);
@@ -155,7 +211,7 @@ int main (int argc, char *argv[])
     Bus & bus = find_nearest_bus();
     cout << "Nearest bus " << bus.period << ", mults " << bus.period * bus.distance << endl;
 
-    //find_first_lcm();
+    find_first_lcm();
 
 	return 0;
 }
