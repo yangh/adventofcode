@@ -26,6 +26,8 @@ ostream& operator<< (ostream& os, const Bus& bus) {
     os << " Pos " << bus.position;
     os << " Period " << bus.period;
     os << " Loop step " << bus.loop_step;
+    os << " Loop n " << bus.loop_n;
+    os << " Start offset " << bus.start_offset;
     return os;
 };
 
@@ -94,23 +96,33 @@ static long bus_lcm(Bus & bus1, Bus & bus2)
     int b2 = bus2.period;
     int offset_target = bus2.position - bus1.position;
     int step = 1;
-    int point = 0;
+    int point = bus2.start_offset;
     int found = 0;
 
     while (1) {
+        bool offset_match = false;
+
         point += bus2.loop_step;
         int offset = point % b1;
-        //cout << "M " << step << ", Offset " << offset;
-        //cout << ", Target " << offset_target << endl;
-        if (offset == offset_target) {
+        cout << "M " << step << ", Offset " << offset;
+        cout << ", Point " << point;
+        cout << ", Target " << offset_target << endl;
+        if (offset > 0) {
+            if (offset == offset_target) {
+                offset_match = true;
+            }
+        } else {
+            if (bus2.loop_step == (offset - offset_target)) {
+                offset_match = true;
+            }
+        }
+        if (offset_match) {
             found++;
-            //cout << "Found" << endl;
+            cout << "Found" << endl;
             if (found == 1) {
                 bus2.loop_start = step;
-                bus2.start_offset = bus2.loop_start * bus2.period;
             } else {
                 bus2.loop_n = step - bus2.loop_start;
-                bus2.loop_step = bus2.loop_n * bus2.period;
                 break;
             }
         }
@@ -141,12 +153,46 @@ static long long find_first_lcm()
 
     T.dump_lines(valid_buses);
 
+    vector<Bus> acc_buses;
+
+    while (valid_buses.size() > 1) {
+
+    for (int i = valid_buses.size() - 1; i > 0; i--) {
+        Bus & bus1 = valid_buses[i - 1];
+        Bus & bus2 = valid_buses[i];
+
+        bus_lcm(bus1, bus2);
+    }
+
+    acc_buses.push_back(valid_buses[valid_buses.size() - 1]);
+
+    for (int i = 1; i < valid_buses.size(); i ++) {
+        Bus & bus1 = valid_buses[i];
+        Bus & bus2 = valid_buses[i];
+
+        bus1.position = bus2.loop_start;
+        bus1.period = bus2.loop_n;
+        bus1.loop_step = bus2.loop_n;
+#if 0
+        bus1.start_offset = bus2.loop_start * bus2.period;
+        bus1.loop_step = bus2.loop_n * bus2.period;
+#endif
+    }
+        T.dump_lines(valid_buses);
+        cout << "ACC buses:" << endl;
+        T.dump_lines(acc_buses);
+        valid_buses.erase(valid_buses.begin());
+        cout << "New valid buses:" << endl;
+        T.dump_lines(valid_buses);
+        //break;
+    }
+
+ #if 0
+ // part 2 draft, works with d13-2
     for (int i = 1; i < valid_buses.size(); i++) {
         bus_lcm(valid_buses[i - 1], valid_buses[i]);
     }
 
- // part 2 draft, works with d13-2
- #if 1
     sort(valid_buses.begin(), valid_buses.end(), bus_sort_by_loop_step_dec);
     T.dump_lines(valid_buses);
 
@@ -184,14 +230,6 @@ static long long find_first_lcm()
             break;
         }
     }
-#endif
-
-#if 0
-    long llcm = 1;
-    for (int i = 1; i < valid_buses.size(); i++) {
-        llcm = lcm(llcm, valid_buses[i].loop_n);
-    }
-    cout << "LCM " << llcm << endl;
 #endif
 
     return fisrt_lcm;
