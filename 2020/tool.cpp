@@ -41,6 +41,17 @@ public:
         return lines;
     }
 
+    static Numbers input_as_numbers(int day, int extra = -1) {
+	    Numbers nums;
+
+	    for (auto &s: input(day, extra)) {
+            if (s.length() > 0) {
+		        nums.push_back(atol(s.c_str()));
+            }
+	 }
+	    return nums;
+    }
+
     template<typename T>
     static void dump_lines(vector<T>& lines, int max = -1)
     {
@@ -73,6 +84,18 @@ public:
 
         for (const auto& item : items) {
             count += fold_func(item);
+        }
+
+        return count;
+    }
+
+    template<typename T1>
+    static int fold_vector_recurse(const T1 init, vector<T1>& items, int (*fold_func) (const T1 &))
+    {
+        if (items.size() == 1) {
+            return fold_func(init, items[0]);
+        } else {
+            return fold_func(init, items[0]);
         }
 
         return count;

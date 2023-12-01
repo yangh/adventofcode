@@ -1,5 +1,7 @@
 #lang racket
 
+; Initcode - A byte code interpretor
+;
 ; Used in https://adventofcode.com/2019/day/2,5,7,9,11,13,15,17
 
 (provide (all-defined-out))
@@ -11,6 +13,7 @@
     ; Debug
     (define debug #f)
     (define/public (set-debug n) (set! debug n))
+
     (define (debuginfo s) (when debug (displayln s)))
   
     ; Opcode: Name, Op Code, Param numbers, Micro code
@@ -158,7 +161,7 @@
       ;(debuginfo (format "Load param for: ~a, ~a ~a ~a" (instrc-intr intr) r1 r2 r3))
       )
 
-    ; Input, queued, FIFO, not thread safely
+    ; Input, queued, FIFO, not thread safety
     (define int-input '())
 
     (define/public (set-input n)
@@ -208,7 +211,7 @@
 
     ; Micro code supported by the CPU
     (define opcodev
-      (vector ;Name Int Params Micocode
+      (vector ;Name Int Params Microcode
        (opcode "Hlt" 0 0 (lambda () (cpu-halt)))
        (opcode "Add" 1 3 (lambda () (memory-set! r3 (+ r1 r2))))
        (opcode "Mul" 2 3 (lambda () (memory-set! r3 (* r1 r2))))
@@ -230,9 +233,12 @@
 
     ; CPU ALU
     (define (cpu-run)
+      ; TBC: Why do we clear regs for each instruction?
       (clear-flag-regs)
       (clear-general-regs)
+
       (load-intr)
+
       (let* ([opc (vector-ref opcodev (instrc-opc intr))]
              [mcode (opcode-mcode opc)]
              [psize (opcode-psize opc)])
