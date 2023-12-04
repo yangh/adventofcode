@@ -11,7 +11,7 @@ fn main() {
 fn part1() -> u32 {
     let mut total = 0;
 
-    if let Ok(lines) = read_lines("src/input") {
+    if let Ok(lines) = read_lines("./input.txt") {
         // Consumes the iterator, returns an (Optional) String
         lines.for_each(|line| {
             if let Ok(cal) = line {
@@ -42,7 +42,7 @@ fn part1() -> u32 {
 fn part2() -> u32 {
     let mut total = 0;
 
-    if let Ok(lines) = read_lines("src/input") {
+    if let Ok(lines) = read_lines("./input.txt") {
         // Consumes the iterator, returns an (Optional) String
         lines.for_each(|line| {
             if let Ok(cal) = line {
