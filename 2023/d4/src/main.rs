@@ -3,7 +3,6 @@ use std::io::{self, BufRead};
 use std::path::Path;
 
 fn main() {
-
     // File hosts.txt must exist in the current path
     if let Ok(lines) = read_lines("./input.txt") {
         let mut gamesv: Vec<_> = Vec::new();
@@ -14,12 +13,7 @@ fn main() {
                 //println!("{}", ip);
                 let strs: Vec<_> = ip.split(": ").collect();
                 let cards: Vec<_> = strs[1].split("| ").collect();
-                let card1: Vec<_> = cards[0].split(" ").collect();
-                let card2: Vec<_> = cards[1].split(" ").collect();
-                //println!("card1 -{}-, -{}-", cards[0], cards[1]);
-                let card1: Vec<_> = card1.iter().map(|c| { if c.is_empty() { None } else { Some(c.parse::<i32>().unwrap()) }}).flatten().collect();
-                let card2: Vec<_> = card2.iter().map(|c| { if c.is_empty() { None } else { Some(c.parse::<i32>().unwrap()) }}).flatten().collect();
-                gamesv.push((card1, card2));
+                gamesv.push((str_to_nums(cards[0]), str_to_nums(cards[1])));
             }
         }
 
@@ -27,10 +21,8 @@ fn main() {
         let mut xv = Vec::new();
 
         gamesv.iter().for_each(|(card1, card2)| {
-            let mut d1 = Vec::new();
             let mut point = 0;
             card1.iter().for_each(|c1| {
-                d1.push(c1);
                 card2.iter().for_each(|c2| {
                     if c1 == c2 {
                         if point == 0 {
@@ -49,11 +41,40 @@ fn main() {
         adv(sum, 25231);
 
         // PART2
-        let mut xv = Vec::new();
-        xv.push(0);
-        let sum = xv.iter().fold(0, |acc, v| acc + v);
+        let mut cards = Vec::<u32>::new();
+        let mut idx: usize = 0;
+        cards.resize(gamesv.len(), 0);
+
+        gamesv.iter().for_each(|(card1, card2)| {
+            let mut point = 0;
+            card1.iter().for_each(|c1| {
+                card2.iter().for_each(|c2| {
+                    if c1 == c2 {
+                        point += 1;
+                    }
+                })
+            });
+
+            println!("{point} points at card {idx}, copies {}", cards[idx]);
+            cards[idx] += 1;
+            if point > 0 {
+                for cid in (idx + 1)..(idx + 1 + point) {
+                    println!("  Add {} for card idx {cid}", cards[idx]);
+                    cards[cid] += cards[idx];
+                }
+                idx += 1;
+            } else {
+                if cards[idx] > 0 {
+                    idx += 1;
+                } else {
+                    println!("No more cards at {idx}");
+                }
+            }
+        });
+
+        let sum = cards.iter().fold(0, |acc, v| acc + v);
         println!("Sum of game powers {}", sum);
-        adv(sum, 71200);
+        adv(sum, 9721255);
     }
 }
 
@@ -63,6 +84,16 @@ fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
+}
+
+fn str_to_nums(str: &str) -> Vec<i32> {
+    let card1: Vec<_> = str.split(" ").collect();
+    card1.iter().map(|c| {
+        if c.is_empty() {
+            None
+        } else {
+            Some(c.parse::<i32>().unwrap()) }
+        }).flatten().collect()
 }
 
 fn adv (ret: u32, n: u32) {
