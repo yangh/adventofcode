@@ -17,27 +17,23 @@
           ([< steps 0] INCR)
           (else INVAL))))
 
-(define canonical
-  (lambda (report)
-    (let ([dir (get-creasement report)])
-      ;(displayln report)
-      ;(displayln (format "dir ~a" dir))
+(define (valid-steps steps)
+      (and ;(> steps 0)
+        (>= steps 1)
+        (<= steps 3)))
 
-      (define check-result
-        (foldl (lambda (level result)
-                 (if (= 0 (first result))
-                     (list level #t)
-                     (list level (and (second result)
-                                      (not (= INVAL dir))
-                                      (let ([steps (cond ([= DECR dir] (- (first result) level ))
-                                                         ([= INCR dir] (- level (first result) )))])
-                                        ;(displayln (format "~a ~a, steps ~a" (first result) level steps))
-                                        (and ;(> steps 0)
-                                         (>= steps 1)
-                                         (<= steps 3)))))))
-               '(0 #t) report))
-      ;(displayln check-result)
-      (second check-result))))
+(define (canonical report)
+  (let ([dir (get-creasement report)])
+    ;(displayln report)
+    ;(displayln (format "dir ~a" dir))
+
+    (and (not (= INVAL dir))
+         (let loop ([levels report])
+           (or (= 1 (length levels)) ; last one
+               (and (valid-steps
+                      (cond ([= DECR dir] (- (first levels) (second levels)))
+                            ([= INCR dir] (- (second levels) (first levels)))))
+                    (loop (rest levels))))))))
 
 ; 549
 (count canonical reports)
