@@ -1,5 +1,6 @@
 #lang racket
 
+(require math/base)
 (require "utils.rkt")
 
 (define lines (input-load-lines "1"))
@@ -38,6 +39,11 @@
        (vector->list (vector-sort l1 <))
        (vector->list (vector-sort l2 <)))
 
+(sum (map (lambda (v1 v2)
+            (abs (- v1 v2)))
+          (vector->list (vector-sort l1 <))
+          (vector->list (vector-sort l2 <))))
+
 (define (similarity-score)
   (define total 0)
   (for ([v1 (vector->list l1)])
@@ -58,3 +64,9 @@
                              (+ t (if (= v1 v2) 1 0)))
                            0 (vector->list l2)))))
        0 (vector->list l1))
+
+(sum (map (lambda (v1)
+            (* v1 (sum (map (lambda (v2)
+                              (if (= v1 v2) 1 0))
+                            (vector->list l2)))))
+            (vector->list l1)))
