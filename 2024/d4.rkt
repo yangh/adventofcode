@@ -80,10 +80,10 @@
 ;lines
 ;(take-word (build-poses 0 0 mr))
 
-(define (is-xmas word)
+(define (is-xmas word orig)
   (andmap (lambda (a b)
             (eq? a b))
-          word xmas))
+          word orig))
 
 ;(is-xmas (take-word (build-poses 5 0 mr)))
 
@@ -98,10 +98,30 @@
             (count (lambda (poses)
                      ;(displayln poses)
                      (and (valid-poses poses)
-                          (is-xmas (take-word poses))))
+                          (is-xmas (take-word poses) xmas)))
                    (map (lambda (matrix)
                           (build-poses pos matrix))
                         (list mr ml mu md ne nw se sw))))
           (generate-coordinates mcols mrows)))
-        
 
+; Part 2, X-MAS
+(define mxm1 '(( 1 -1) ( 0  0) (-1  1)))
+(define mxm2 '((-1  1) ( 0  0) ( 1 -1)))
+(define mxm3 '(( 1  1) ( 0  0) (-1 -1)))
+(define mxm4 '((-1 -1) ( 0  0) ( 1  1)))
+
+(define x-mas (string->list "MAS"))
+
+; 1912
+(count (lambda (pos)
+         ;(displayln pos)
+         (andmap (lambda (mxml)
+                   (ormap (lambda (poses)
+                            ;(displayln poses)
+                            (and (valid-poses poses)
+                                 (is-xmas (take-word poses) x-mas)))
+                          (map (lambda (matrix)
+                                 (build-poses pos matrix))
+                               mxml)))
+                 (list (list mxm1 mxm2) (list mxm3 mxm4))))
+       (generate-coordinates mcols mrows))
