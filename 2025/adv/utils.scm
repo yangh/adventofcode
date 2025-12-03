@@ -1,5 +1,5 @@
 (define-module (adv utils)
-	#:export (load-input pp p fold-add))
+	#:export (load-input pp p fold-add dd tt adv1 adv2))
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 textual-ports))
@@ -27,3 +27,63 @@
   (fold (lambda (ele prev)
           (+ prev (proc ele)))
         0 lst))
+
+
+(use-modules (ice-9 getopt-long))   ;; The official, most powerful parser
+
+(define *option-spec*
+  '((test     (single-char #\t) (value #f))        ;; -test or -t   → boolean
+    (debug    (single-char #\d) (value #f))        ;; -debug or -d  → boolean
+    (first    (single-char #\f) (value #f))        ;; -first X      → requires value
+    (second   (single-char #\s) (value #f))        ;; -second Y     → requires value
+    (verbose  (single-char #\v) (value #f))        ;; --verbose     → long option
+    (help     (single-char #\h) (value #f))))      ;; -h / --help
+
+;; -----------------------------------------------------------------------
+;; 2. Parse argv
+;; -----------------------------------------------------------------------
+(define *options* (getopt-long (program-arguments) *option-spec*))
+(define *opts*    (option-ref *options* '() '()))   ;; all parsed options
+
+;; Helper to read an option (returns #f if not present)
+(define (opt key) (option-ref *options* key #f))
+
+;; -----------------------------------------------------------------------
+;; 3. Extract values (with nice English names)
+;; -----------------------------------------------------------------------
+(define test?     (opt 'test))      ;; #t if -test or -t was given
+(define debug?    (opt 'debug))     ;; #t if -debug or -d
+;;(define first-val (opt 'first))     ;; string or #f
+(define first?    (opt 'first))     ;; string or #f
+(define second?   (opt 'second))   ;; string or #f
+(define verbose?  (opt 'verbose))
+(define help?     (opt 'help))
+
+;; -----------------------------------------------------------------------
+;; 4. Show help if requested
+;; -----------------------------------------------------------------------
+(when help?
+  (display
+   "Usage: my-program.scm [options] [files...]
+
+Options:
+  -t, --test              Enable test mode
+  -d, --debug             Enable debug output
+  -f, --first VALUE       First parameter
+  -s, --second VALUE      Second parameter
+  --verbose               Be verbose
+  -h, --help              Show this help
+")
+  (exit 0))
+
+(define (dd obj)
+  (when debug? (pp obj)))
+
+(define (tt obj)
+  (when test? (pp obj)))
+
+(define (adv1 obj)
+  (when first? (pp obj)))
+
+(define (adv2 obj)
+  (when second? (pp obj)))
