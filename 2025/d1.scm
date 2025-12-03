@@ -1,5 +1,4 @@
 (use-modules (adv utils))
-(use-modules (ice-9 pretty-print))
 (use-modules (srfi srfi-1))
 
 (define inputs (load-input "d1.txt"))
@@ -9,7 +8,7 @@
   (let ((dial-n 50))
     (fold-add
      (lambda (ele)
-       ;;(pp ele)
+       (dd ele)
        (let ((offset (modulo (string->number (substring ele 1)) 100))
              (rrs (floor-quotient (string->number (substring ele 1)) 100))
              (dir (string-ref ele 0))
@@ -29,7 +28,7 @@
                          ((= ret 100) (set! dial-n 0) 1)
                          ((> ret 100) (set! dial-n (- ret 100))
                           (if rround 1 0))))))))
-           (pp (list dial-o offset dial-n dir rrs pwd ele))
+           ;;(dd (list dial-o offset dial-n dir rrs pwd ele))
            (if rround
                (+ rrs pwd)
                pwd))))

@@ -20,6 +20,7 @@
 (define (pos-1 mp) (cadr (cadr mp)))
 
 ;; find the top 2 numbers in the list
+;; return '((max1 pos1) (max2 pos2))
 (define (find-max-pair batts)
   (dd (list "find in" (list->string (map (lambda(n) (integer->char (+ n char-0-int))) batts))))
   (let loop ((batts batts)
@@ -67,6 +68,7 @@
     (+ (* 10 (car p1))
        (car p2))))
 
+;; Search and sum in parallel
 ;; search range:
 ;; start - position of last found max num
 ;; end - (- len (remined nums))
@@ -109,4 +111,4 @@
 ;; 3121910778619
 ;;(pp (d2 simples))
 ;; 169709990062889
-;;(pp (d2 inputs))
+(pp (d2 inputs))

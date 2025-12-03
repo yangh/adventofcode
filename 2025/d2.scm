@@ -85,11 +85,11 @@
 ;; is-twins?      proc to test number
 ;; check-all-odd? all numbers are odd?
 (define (find-twins is-twins? lst check-all-odd?)
-  (pp lst)
+  (dd lst)
   (cond
    ((and check-all-odd?
          (and-map odd? (map num-length lst)))
-    (pp "skip all odd length numbers") 0)
+    (dd "skip all odd length numbers") 0)
    (else
     (let loop ((n1 (car lst))
                (n2 (car (cdr lst))))
@@ -99,7 +99,7 @@
         0)
        (else
         ;; add n1 for sum, add 1 for counting
-        (+ (if (is-twins? n1) (begin (pp n1) n1) 0)
+        (+ (if (is-twins? n1) (begin (dd n1) n1) 0)
            (loop (+ 1 n1) n2))))))))
 
 (define (find-twins-1 lst)
@@ -118,6 +118,6 @@
 (pp (d1))
 ;;(adv1 (d1))
 ;; 30260171216
-;;(pp (d2))
+(pp (d2))
 ;;(adv1 (list 1 2 3))
 ;;(adv2 (list 4 2 3))
