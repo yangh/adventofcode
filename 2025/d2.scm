@@ -14,9 +14,16 @@
 
 ;; simlair to string-length
 (define (num-length n)
-  (let loop ((i n))
-    (if (< i 10) 1
-        (+ 1 (loop (floor-quotient i 10))))))
+  (cond
+    ((zero? n) 1)
+    (else
+      (let loop ((i (abs n)) (len 1))
+        (if (< i 10) len
+          (loop (floor-quotient i 10) (+ len 1)))))))
+
+(tt (num-length 12345))
+(tt (num-length -12345))
+(tt (num-length 0))
 
 ;; ABAB, ABCABC patten
 (define (ntwins? num)
