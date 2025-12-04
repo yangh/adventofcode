@@ -68,6 +68,7 @@
 ;;(pp (num-list-equal? (num-split 100 121212)))
 
 ;; ABABAB* pattern
+;; TBD: perf: add cache to num-split or rewrite it
 (define (nntwins? num)
   (dd (list "num" num))
   (let* ((len (num-length num))

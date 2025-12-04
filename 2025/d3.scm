@@ -11,6 +11,10 @@
 (define (char->digit ch)
   (- (char->integer ch) char-0-int))
 
+(define (nums->string nlist)
+  (list->string
+   (map (lambda(n) (integer->char (+ n char-0-int))) nlist)))
+
 (define (batt-lists lines)
   (map (lambda(line) (map char->digit (string->list line))) lines))
 
@@ -40,19 +44,16 @@
 ;;(tt (find-max-pair '(2 1 5 9 7 1 8)))
 ;;(tt (find-max-pair '(1 1 1 1)))
 
+;; Find max number in nlist[start:end]
+;; return '(max pos)
+;; TBD: return nil if nlist is null
 (define (find-max-in-range nlist start end)
-  (dd (list "find in range"
-            (list->string
-             (map (lambda(n) (integer->char (+ n char-0-int))) nlist))
-            start end))
-  (let loop ((pos start) (max '(0 0)))
-      (cond
-       ((> pos end) max)
-       ((> (list-ref nlist pos) (car max))
-        (loop (add1 pos) (list (list-ref nlist pos) pos)))
-       (else
-        (loop (add1 pos) max)
-        ))))
+  (dd (list "find in range" (nums->string nlist) start end))
+  (let loop ((pos start) (max-p '(0 0)))
+    (if (> pos end) max-p
+        (loop (add1 pos)
+              (list (max (list-ref nlist pos) (car max-p))
+                    pos)))))
 
 ;;(pp (find-max-in-range '(2 1 5 9 7 1 8) 0 3))
 ;;(pp (find-max-in-range '(2 1 5 9 7 1 8) 0 2))
@@ -68,6 +69,7 @@
     (+ (* 10 (car p1))
        (car p2))))
 
+;; Find rn max numbers in the list in order
 ;; Search and sum in parallel
 ;; search range:
 ;; start - position of last found max num
@@ -80,10 +82,10 @@
     (let loop ((start 0)
                (rn rn))
       (if (= rn 0) 0
-          (let ((max (find-max-in-range batts start (- len rn))))
-            (dd (list "found" max))
-            (+ (* (expt 10 (sub1 rn)) (car max))
-               (loop (add1 (cadr max)) (sub1 rn))))
+          (let ((max-p (find-max-in-range batts start (- len rn))))
+            (dd (list "found" max-p))
+            (+ (* (expt 10 (sub1 rn)) (car max-p))
+               (loop (add1 (cadr max-p)) (sub1 rn))))
           ))))
 
 (define (d1 inputs)

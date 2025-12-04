@@ -89,3 +89,7 @@ Options:
 
 (define (adv2 obj)
   (when second? (pp obj)))
+
+;; (use-modules (ice-9 curried-definitions))
+;; (define-syntax-rule (dbg msg)
+;;   (format #t "[DEBUG ~a] ~a~%" (or (current-procedure-name) 'anonymous) msg))
