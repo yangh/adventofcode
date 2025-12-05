@@ -8,4 +8,4 @@ usage() {
 
 [ -e "$1.scm" ] || usage
 
-guile -L . $1.scm $@
+time guile -L . $1.scm $@

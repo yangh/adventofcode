@@ -117,10 +117,10 @@
   (find-twins nntwins? lst #f))
 
 (define (d1)
-  (fold-add find-twins-1 nranges))
+  (fold-add-parallel find-twins-1 nranges))
 
 (define (d2)
-  (fold-add find-twins-2 nranges))
+  (fold-add-parallel find-twins-2 nranges))
 
 ;; 20223751480
 (pp (d1))

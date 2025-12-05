@@ -1,8 +1,10 @@
 (define-module (adv utils)
-	#:export (load-input pp p fold-add dd tt adv1 adv2))
+	#:export (load-input pp p fold-add fold-add-parallel dd tt adv1 adv2))
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 textual-ports))
+(use-modules (ice-9 threads))
+(use-modules (ice-9 futures))
 (use-modules (srfi srfi-1))
 
 (define (pp obj)
@@ -30,6 +32,21 @@
           (+ prev (proc ele)))
         0 lst))
 
+(use-modules (ice-9 futures) (ice-9 match))
+
+(define (par-map proc lst)
+  (match lst
+    (()
+     '())
+    ((head tail ...)
+     (let ((tail (future (par-map proc tail)))
+           (head (proc head)))
+       (cons head (touch tail))))))
+
+;; Parallel fold add
+(define (fold-add-parallel proc lst)
+  (apply + (par-map proc lst)))
+;; (fold + 0 (map touch (map future (map proc lst)))))
 
 (use-modules (ice-9 getopt-long))   ;; The official, most powerful parser
 

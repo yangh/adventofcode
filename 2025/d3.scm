@@ -92,11 +92,11 @@
   (fold-add find-max-pair-r2 (batt-lists inputs)))
 
 (define (d2 inputs)
-  (fold-add (lambda (lst) (find-max-pair-rn lst 12))
+  (fold-add-parallel (lambda (lst) (find-max-pair-rn lst 12))
             (batt-lists inputs)))
 
 (define (d1-v2 inputs)
-  (fold-add (lambda (lst) (find-max-pair-rn lst 2))
+  (fold-add-parallel (lambda (lst) (find-max-pair-rn lst 2))
             (batt-lists inputs)))
 
 (define simples (list
