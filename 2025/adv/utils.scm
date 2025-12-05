@@ -28,7 +28,7 @@
 
 ;; Load file as list of each line
 (define (load-input filename)
-  (file->list filename))
+  (file->list (string-append "inputs/" filename)))
 
 ;; Sum all the result from each element after call proc
 (define (fold-add proc lst)
