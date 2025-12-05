@@ -1,5 +1,9 @@
 (define-module (adv utils)
-	#:export (load-input pp p fold-add fold-add-parallel dd tt adv1 adv2))
+	#:export (load-input pp p
+                       fold-add
+                       fold-add-parallel
+                       fold-append-parallel
+                       dd tt adv1 adv2))
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 textual-ports))
@@ -47,6 +51,9 @@
 (define (fold-add-parallel proc lst)
   (apply + (par-map proc lst)))
 ;; (fold + 0 (map touch (map future (map proc lst)))))
+
+(define (fold-append-parallel proc lst)
+  (apply append (par-map proc lst)))
 
 (use-modules (ice-9 getopt-long))   ;; The official, most powerful parser
 
