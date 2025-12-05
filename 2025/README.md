@@ -1,7 +1,11 @@
-ADV 2025
-========
+Advent of Code 2025
+===================
 
-guile - make lisp greate again
+Guile - make lisp greate again
+
+All wrote by hands.
+
+(expect some parts (*options*) of the adv/utils.scm)
 
 How to run?
 -----------
