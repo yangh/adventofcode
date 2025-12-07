@@ -3,7 +3,9 @@
                        fold-add
                        fold-add-parallel
                        fold-append-parallel
-                       dd tt adv1 adv2))
+                       dd tt adv1 adv2
+                       add1 sub1
+                       ))
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 textual-ports))
@@ -54,6 +56,9 @@
 
 (define (fold-append-parallel proc lst)
   (apply append (par-map proc lst)))
+
+(define (add1 v) (+ v 1))
+(define (sub1 v) (- v 1))
 
 (use-modules (ice-9 getopt-long))   ;; The official, most powerful parser
 
