@@ -2,9 +2,13 @@
 	#:export (load-input pp p
                        fold-add
                        fold-add-parallel
+                       fold-append
                        fold-append-parallel
                        dd tt adv1 adv2
                        add1 sub1
+                       list-findp
+                       list-uniq-add
+                       list-uniq
                        ))
 
 (use-modules (ice-9 pretty-print))
@@ -36,6 +40,11 @@
   (fold (lambda (ele prev)
           (+ prev (proc ele)))
         0 lst))
+
+(define (fold-append proc lst)
+  (fold (lambda (ele prev)
+          (append prev (proc ele)))
+        '() lst))
 
 ;; Parallel fold add
 (define (fold-add-parallel proc lst)
@@ -121,3 +130,23 @@ Options:
                filename
                (if example? ".0" "")
                ".txt")))
+
+;; List utils
+(define (list-findp lst v)
+  (let find ((p 0) (lst lst))
+    (cond
+     ((null? lst) #f)
+     ((eq? (car lst) v) p)
+     (else (find (add1 p) (cdr lst))))))
+
+(define (list-uniq-add lst v)
+  (if (list-findp lst v)
+      lst
+      (append lst (list v))))
+
+(define (list-uniq lst)
+  (let loop ((ret '()) (lst lst))
+    ;;(pp (list "list-uniq" ret lst))
+    (if (null? lst) ret
+        (loop (list-uniq-add ret (car lst))
+              (cdr lst)))))
