@@ -35,7 +35,7 @@
         (loop (list-add-uniq ret (car lst))
               (cdr lst)))))
 
-(pp (list "Uniq" (list-uniq '(3 4 5 3 4 5 1 1 1))))
+(tt (list "Uniq" (list-uniq '(3 4 5 3 4 5 1 1 1))))
 
 (define START   #\S)
 (define SPLITER #\^)
@@ -77,7 +77,7 @@
 
 (define (count-split-times)
   (beaming)
-  (pp (map list->string matrix))
+  (dd (map list->string matrix))
 
   (let ((row-len (length (list-ref matrix 0))))
     (fold-add-parallel (lambda (row)
@@ -117,105 +117,22 @@
                (map (lambda (pos)
                       (if (char=? BEAM (matrix-ref matrix row pos))
                           (matrix-sum-up row pos)
-                          0
-                          )
-                    )
+                          0))
                     (iota matrix-row-len)
                     ))))
 
 ;; top to bottom, simple works, but 140 lines too complex to resolve
 (define (count-particle-path)
-  (let ((end-line (sub1 inputs-len))
-        (end-col  (sub1 (length (list-ref matrix 0)))))
-      (let loop ((ret 0)
-                 (row 1)
-                 (pos start-pos)
-                 (path '()))
-        ;;(pp (list "check" ret row pos path))
-        (if (= row end-line)
-            (if (char=? BEAM (matrix-ref matrix row pos))
-                (begin
-                  ;;(pp (list "particle" ret row pos))
-                  1)
-                0)
-            (let ((v (matrix-ref matrix (add1 row) pos)))
-              (cond
-               ((char=? v BEAM)
-                ;; middle
-                (+ ret (loop ret (add1 row) pos (cons pos path))))
-               ((char=? v SPLITER)
-                (+ ret
-                   ;; left
-                   (if (not (and (> pos 0)
-                                 (char=? BEAM (matrix-ref matrix (add1 row) (sub1 pos)))))
-                       0 (loop ret (add1 row) (sub1 pos) (cons (sub1 pos) (cdr path))))
-                   ;; right
-                   (if (not (and (< pos end-col)
-                                 (char=? BEAM (matrix-ref matrix (add1 row) (add1 pos)))))
-                       0 (loop ret (add1 row) (add1 pos) (cons (add1 pos) (cdr path))))))
-               (else 0))
-              )))))
-
-;; From bottom to up.
-(define (count-particle-path-b2u pos)
-  (pp (list "check" pos))
-  (let ((end-line 1)
-        (end-col  (sub1 (length (list-ref matrix 0)))))
-    (let loop ((ret 0)
-               (row (sub1 inputs-len))
-               (pos pos)
-               (path '()))
-      ;;(pp (list "check" ret row pos path))
-      (when (> (length path) inputs-len)
-        (pp (list "dead loop" row pos path)))
-      (let ((currv (matrix-ref matrix row pos)))
-        (if (char=? BEAM currv)
-            (if (= row end-line)
-                (begin
-                  ;;(pp (list "partical" ret row pos path))
-                  ;;(pp (list "partical" ret (car path)))
-                  1)
-                (+ ret
-                   ;; up
-                   (loop ret (sub1 row) pos path)
-                   ;; left
-                   (if (not (and (>= (sub1 pos) 0)
-                                 (char=? SPLITER (matrix-ref matrix row (sub1 pos)))))
-                       0 (loop ret (- row 1) (sub1 pos) (cons (sub1 pos) path)))
-                   ;; right
-                   (if (not (and (<= (add1 pos) end-col)
-                                 (char=? SPLITER (matrix-ref matrix row (add1 pos)))))
-                       0 (loop ret (- row 1) (add1 pos) (cons (add1 pos) path)))
-                   ))
-            0)))))
-
-(define (count-particle-path-beam-talks row)
-  (pp (list "row" row))
-  (if (= row 0) 0
-      (let ((fields (list-ref matrix row))
-            (fields-up (list-ref matrix (sub1 row))))
-        (fold-add (lambda (pos)
-                    (if (and
-                         (char=? SPLITER (list-ref fields pos))
-                         (char=? BEAM (list-ref fields-up pos)))
-                        1 0))
-                  (iota inputs-row-len)
-                  ))))
+  (map matrix-sum (iota matrix-len))
+  (dd matrix-nums)
+  (apply + (list-ref matrix-nums (sub1 matrix-len))))
 
 (define (d1) (count-split-times))
 
 (pp (d1))
 
 ;; Depends on d1
-(define (d2-hard)
-  (fold-add-parallel count-particle-path-b2u
-                     (iota (length (list-ref matrix 0)))))
-
-(define (d2)
-  (map matrix-sum (iota matrix-len))
-  (pp matrix-nums)
-  (apply + (list-ref matrix-nums (sub1 matrix-len)))
-  )
+(define (d2) (count-particle-path))
 
 ;; 34339203133559
 (pp (d2))
