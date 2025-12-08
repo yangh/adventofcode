@@ -1,9 +1,10 @@
 (use-modules (adv utils))
 (use-modules (srfi srfi-1))
 
-(define inputs (load-input "d7.0.txt"))
+(define inputs (load-input "d7.txt"))
 
 (define inputs-len (length inputs))
+(define inputs-row-len (string-length (list-ref inputs 0)))
 (define matrix (map (lambda (s) (string->list s)) inputs))
 
 (define (matrix-ref lst row col)
@@ -36,6 +37,7 @@
 (define START   #\S)
 (define SPLITER #\^)
 (define BEAM    #\|)
+(define DOT     #\.)
 
 (define start-pos (list-findp (list-ref matrix 0) START))
 
@@ -88,6 +90,7 @@
                                 (iota row-len)))))
               (iota inputs-len))))
 
+;; top to bottom, simple works, but 140 lines too complex to resolve
 (define (count-particle-path)
   (let ((end-line (sub1 inputs-len))
         (end-col  (sub1 (length (list-ref matrix 0)))))
@@ -120,11 +123,60 @@
                (else 0))
               )))))
 
+;; From bottom to up.
+(define (count-particle-path-b2u pos)
+  (pp (list "check" pos))
+  (let ((end-line 1)
+        (end-col  (sub1 (length (list-ref matrix 0)))))
+    (let loop ((ret 0)
+               (row (sub1 inputs-len))
+               (pos pos)
+               (path '()))
+      ;;(pp (list "check" ret row pos path))
+      (let ((currv (matrix-ref matrix row pos)))
+        (if (char=? BEAM currv)
+            (if (= row end-line)
+                (begin
+                  ;;(pp (list "partical" ret row pos path))
+                  ;;(pp (list "partical" ret (car path)))
+                  1)
+                (+ ret
+                   ;; up
+                   (loop ret (sub1 row) pos (append path (list pos)))
+                   ;; left
+                   (if (not (and (>= (sub1 pos) 0)
+                                 (char=? SPLITER (matrix-ref matrix row (sub1 pos)))))
+                       0 (loop ret (sub1 row) (sub1 pos) (append path (list pos))))
+                   ;; right
+                   (if (not (and (<= (add1 pos) end-col)
+                                 (char=? SPLITER (matrix-ref matrix row (add1 pos)))))
+                       0 (loop ret (sub1 row) (add1 pos) (append path (list pos))))
+                   ))
+            0)))))
+
+(define (count-particle-path-beam-talks row)
+  (pp (list "row" row))
+  (if (= row 0) 0
+      (let ((fields (list-ref matrix row))
+            (fields-up (list-ref matrix (sub1 row))))
+        (fold-add (lambda (pos)
+                    (if (and
+                         (char=? SPLITER (list-ref fields pos))
+                         (char=? BEAM (list-ref fields-up pos)))
+                        1 0))
+                  (iota inputs-row-len)
+                  ))))
+
 (define (d1) (count-split-times))
 
 (pp (d1))
 
 ;; Depends on d1
-(define (d2) (count-particle-path))
+(define (d2-hard)
+  (fold-add-parallel count-particle-path-b2u
+                     (iota (length (list-ref matrix 0)))))
 
+(define (d2)
+  (* 2 (sub1 (fold-add-parallel count-particle-path-beam-talks
+                     (iota (/ inputs-len 2) 0 2)))))
 (pp (d2))
