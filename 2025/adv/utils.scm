@@ -4,11 +4,13 @@
                        fold-add-parallel
                        fold-append
                        fold-append-parallel
+                       fold-append-uniq
                        dd tt adv1 adv2
                        add1 sub1
                        list-findp
-                       list-uniq-add
                        list-uniq
+                       list-uniq-add
+                       list-uniq-append
                        ))
 
 (use-modules (ice-9 pretty-print))
@@ -20,7 +22,7 @@
 (define (pp obj)
   (pretty-print obj
                 #:width 100
-               ;; #:max-expr-width 300
+                ;; #:max-expr-width 300
                 ))
 
 (define (p obj)
@@ -35,6 +37,14 @@
               (reverse lines)
               (loop (cons line lines))))))))
 
+;; Load file as list of each line
+(define (load-input filename)
+  (file->list (string-append
+               "inputs/"
+               filename
+               (if example? ".0" "")
+               ".txt")))
+
 ;; Sum all the result from each element after call proc
 (define (fold-add proc lst)
   (fold (lambda (ele prev)
@@ -44,6 +54,11 @@
 (define (fold-append proc lst)
   (fold (lambda (ele prev)
           (append prev (proc ele)))
+        '() lst))
+
+(define (fold-append-uniq proc lst)
+  (fold (lambda (ele prev)
+          (list-uniq-append prev (proc ele)))
         '() lst))
 
 ;; Parallel fold add
@@ -123,14 +138,6 @@ Options:
 ;; (define-syntax-rule (dbg msg)
 ;;   (format #t "[DEBUG ~a] ~a~%" (or (current-procedure-name) 'anonymous) msg))
 
-;; Load file as list of each line
-(define (load-input filename)
-  (file->list (string-append
-               "inputs/"
-               filename
-               (if example? ".0" "")
-               ".txt")))
-
 ;; List utils
 (define (list-findp lst v)
   (let find ((p 0) (lst lst))
@@ -146,6 +153,15 @@ Options:
 
 (define (list-uniq lst)
   (let loop ((ret '()) (lst lst))
+    ;;(pp (list "list-uniq" ret lst))
+    (if (null? lst) ret
+        (loop (list-uniq-add ret (car lst))
+              (cdr lst)))))
+
+;;(tt (list "Uniq" (list-uniq '(3 4 5 3 4 5 1 1 1))))
+
+(define (list-uniq-append prev lst)
+  (let loop ((ret prev) (lst lst))
     ;;(pp (list "list-uniq" ret lst))
     (if (null? lst) ret
         (loop (list-uniq-add ret (car lst))

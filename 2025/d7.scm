@@ -30,20 +30,19 @@
 
 (define (beams-at row last-beams)
   (let ((fields (list-ref matrix row)))
-    (list-uniq
-     (fold-append
-      (lambda (pos)
-        (let ((f (list-ref fields pos)))
-          (cond
-           ((char=? f SPLITER)
-            ;;(dd (list "spliter" row pos))
-            (matrix-set! matrix row (sub1 pos) BEAM)
-            (matrix-set! matrix row (add1 pos) BEAM)
-            (list (sub1 pos) (add1 pos)))
-           (else
-            (matrix-set! matrix row pos BEAM)
-            (list pos)))))
-      last-beams))))
+    (fold-append-uniq
+     (lambda (pos)
+       (let ((f (list-ref fields pos)))
+         (cond
+          ((char=? f SPLITER)
+           ;;(dd (list "spliter" row pos))
+           (matrix-set! matrix row (sub1 pos) BEAM)
+           (matrix-set! matrix row (add1 pos) BEAM)
+           (list (sub1 pos) (add1 pos)))
+          (else
+           (matrix-set! matrix row pos BEAM)
+           (list pos)))))
+     last-beams)))
 
 (define (beaming)
   ;; First beam at 2nd row
