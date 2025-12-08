@@ -1,7 +1,7 @@
 (use-modules (adv utils))
 (use-modules (srfi srfi-1))
 
-(define inputs (load-input "d7.txt"))
+(define inputs (load-input "d7"))
 
 (define inputs-len (length inputs))
 (define inputs-row-len (string-length (list-ref inputs 0)))

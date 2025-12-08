@@ -1,7 +1,7 @@
 (use-modules (adv utils))
 (use-modules (srfi srfi-1))
 
-(define inputs (load-input "d1.txt"))
+(define inputs (load-input "d1"))
 
 ;; rround - count on over loop
 (define (d1 rround)

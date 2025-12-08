@@ -1,7 +1,7 @@
 (use-modules (adv utils))
 (use-modules (srfi srfi-1))
 
-(define inputs (load-input "d2.txt"))
+(define inputs (load-input "d2"))
 (define ranges (string-split (car inputs) #\,))
 ;;(pp ranges)
 

@@ -31,19 +31,11 @@
               (reverse lines)
               (loop (cons line lines))))))))
 
-;; Load file as list of each line
-(define (load-input filename)
-  (file->list (string-append "inputs/" filename)))
-
 ;; Sum all the result from each element after call proc
 (define (fold-add proc lst)
   (fold (lambda (ele prev)
           (+ prev (proc ele)))
         0 lst))
-
-(use-modules (ice-9 futures)
-             (ice-9 threads)
-             (ice-9 match))
 
 ;; Parallel fold add
 (define (fold-add-parallel proc lst)
@@ -61,6 +53,7 @@
 (define *option-spec*
   '((test     (single-char #\t) (value #f))        ;; -test or -t   → boolean
     (debug    (single-char #\d) (value #f))        ;; -debug or -d  → boolean
+    (example  (single-char #\e) (value #f))        ;; -example or -e  → boolean
     (first    (single-char #\f) (value #f))        ;; -first X      → requires value
     (second   (single-char #\s) (value #f))        ;; -second Y     → requires value
     (verbose  (single-char #\v) (value #f))        ;; --verbose     → long option
@@ -80,6 +73,7 @@
 ;; -----------------------------------------------------------------------
 (define test?     (opt 'test))      ;; #t if -test or -t was given
 (define debug?    (opt 'debug))     ;; #t if -debug or -d
+(define example?  (opt 'example))   ;; #t if -example or -e
 ;;(define first-val (opt 'first))     ;; string or #f
 (define first?    (opt 'first))     ;; string or #f
 (define second?   (opt 'second))   ;; string or #f
@@ -98,6 +92,7 @@ Options:
   -d, --debug             Enable debug output
   -f, --first VALUE       First parameter
   -s, --second VALUE      Second parameter
+  -e, --example           Use example input
   --verbose               Be verbose
   -h, --help              Show this help
 ")
@@ -118,3 +113,11 @@ Options:
 ;; (use-modules (ice-9 curried-definitions))
 ;; (define-syntax-rule (dbg msg)
 ;;   (format #t "[DEBUG ~a] ~a~%" (or (current-procedure-name) 'anonymous) msg))
+
+;; Load file as list of each line
+(define (load-input filename)
+  (file->list (string-append
+               "inputs/"
+               filename
+               (if example? ".0" "")
+               ".txt")))

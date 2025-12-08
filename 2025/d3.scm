@@ -1,7 +1,7 @@
 (use-modules (adv utils))
 (use-modules (srfi srfi-1))
 
-(define inputs (load-input "d3.txt"))
+(define inputs (load-input "d3"))
 
 (define (sub1 n) (- n 1))
 (define (sub2 n) (- n 2))

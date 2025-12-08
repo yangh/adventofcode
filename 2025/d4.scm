@@ -1,7 +1,7 @@
 (use-modules (adv utils))
 (use-modules (srfi srfi-1))
 
-(define inputs (map string->list (load-input "d4.txt")))
+(define inputs (map string->list (load-input "d4")))
 
 (define rows (length inputs))
 (define cols (length (car inputs)))
