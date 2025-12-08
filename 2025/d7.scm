@@ -5,7 +5,10 @@
 
 (define inputs-len (length inputs))
 (define inputs-row-len (string-length (list-ref inputs 0)))
+
 (define matrix (map (lambda (s) (string->list s)) inputs))
+(define matrix-len (length matrix))
+(define matrix-row-len (length (list-ref matrix 0)))
 
 (define (matrix-ref lst row col)
   (list-ref (list-ref lst row) col))
@@ -90,6 +93,36 @@
                                 (iota row-len)))))
               (iota inputs-len))))
 
+(define matrix-nums
+  (make-list matrix-len (make-list matrix-row-len 0)))
+
+(define (matrix-sum-up row pos)
+  (if (= row 1)
+      (if (= pos start-pos) 1 0)
+      (+
+       (matrix-ref matrix-nums (sub1 row) pos)
+       (if (not (and (> pos 0)
+                     (char=? SPLITER (matrix-ref matrix row (sub1 pos)))))
+           0
+           (matrix-ref matrix-nums (sub1 row) (sub1 pos)))
+       (if (not (and (< pos (sub1 matrix-row-len))
+                     (char=? SPLITER (matrix-ref matrix row (add1 pos)))))
+           0
+           (matrix-ref matrix-nums (sub1 row) (add1 pos)))
+       )))
+
+(define (matrix-sum row)
+  (when (> row 0)
+    (list-set! matrix-nums row
+               (map (lambda (pos)
+                      (if (char=? BEAM (matrix-ref matrix row pos))
+                          (matrix-sum-up row pos)
+                          0
+                          )
+                    )
+                    (iota matrix-row-len)
+                    ))))
+
 ;; top to bottom, simple works, but 140 lines too complex to resolve
 (define (count-particle-path)
   (let ((end-line (sub1 inputs-len))
@@ -109,17 +142,17 @@
               (cond
                ((char=? v BEAM)
                 ;; middle
-                (+ ret (loop ret (add1 row) pos (append path (list pos)))))
+                (+ ret (loop ret (add1 row) pos (cons pos path))))
                ((char=? v SPLITER)
                 (+ ret
                    ;; left
                    (if (not (and (> pos 0)
                                  (char=? BEAM (matrix-ref matrix (add1 row) (sub1 pos)))))
-                       0 (loop ret (add1 row) (sub1 pos) (append path (list pos))))
+                       0 (loop ret (add1 row) (sub1 pos) (cons (sub1 pos) (cdr path))))
                    ;; right
                    (if (not (and (< pos end-col)
                                  (char=? BEAM (matrix-ref matrix (add1 row) (add1 pos)))))
-                       0 (loop ret (add1 row) (add1 pos) (append path (list pos))))))
+                       0 (loop ret (add1 row) (add1 pos) (cons (add1 pos) (cdr path))))))
                (else 0))
               )))))
 
@@ -133,6 +166,8 @@
                (pos pos)
                (path '()))
       ;;(pp (list "check" ret row pos path))
+      (when (> (length path) inputs-len)
+        (pp (list "dead loop" row pos path)))
       (let ((currv (matrix-ref matrix row pos)))
         (if (char=? BEAM currv)
             (if (= row end-line)
@@ -142,15 +177,15 @@
                   1)
                 (+ ret
                    ;; up
-                   (loop ret (sub1 row) pos (append path (list pos)))
+                   (loop ret (sub1 row) pos path)
                    ;; left
                    (if (not (and (>= (sub1 pos) 0)
                                  (char=? SPLITER (matrix-ref matrix row (sub1 pos)))))
-                       0 (loop ret (sub1 row) (sub1 pos) (append path (list pos))))
+                       0 (loop ret (- row 1) (sub1 pos) (cons (sub1 pos) path)))
                    ;; right
                    (if (not (and (<= (add1 pos) end-col)
                                  (char=? SPLITER (matrix-ref matrix row (add1 pos)))))
-                       0 (loop ret (sub1 row) (add1 pos) (append path (list pos))))
+                       0 (loop ret (- row 1) (add1 pos) (cons (add1 pos) path)))
                    ))
             0)))))
 
@@ -177,6 +212,10 @@
                      (iota (length (list-ref matrix 0)))))
 
 (define (d2)
-  (* 2 (sub1 (fold-add-parallel count-particle-path-beam-talks
-                     (iota (/ inputs-len 2) 0 2)))))
+  (map matrix-sum (iota matrix-len))
+  (pp matrix-nums)
+  (apply + (list-ref matrix-nums (sub1 matrix-len)))
+  )
+
+;; 34339203133559
 (pp (d2))

@@ -14,7 +14,10 @@
 (use-modules (srfi srfi-1))
 
 (define (pp obj)
-  (pretty-print obj))
+  (pretty-print obj
+                #:width 100
+               ;; #:max-expr-width 300
+                ))
 
 (define (p obj)
   (display obj) (newline))
@@ -38,16 +41,9 @@
           (+ prev (proc ele)))
         0 lst))
 
-(use-modules (ice-9 futures) (ice-9 match))
-
-(define (par-map proc lst)
-  (match lst
-    (()
-     '())
-    ((head tail ...)
-     (let ((tail (future (par-map proc tail)))
-           (head (proc head)))
-       (cons head (touch tail))))))
+(use-modules (ice-9 futures)
+             (ice-9 threads)
+             (ice-9 match))
 
 ;; Parallel fold add
 (define (fold-add-parallel proc lst)
