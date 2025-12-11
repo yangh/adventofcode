@@ -11,6 +11,8 @@
                        list-uniq
                        list-uniq-add
                        list-uniq-append
+                       list-head1
+                       list-tail1
                        ))
 
 (use-modules (ice-9 pretty-print))
@@ -22,7 +24,7 @@
 (define (pp obj)
   (pretty-print obj
                 #:width 100
-                ;; #:max-expr-width 300
+                #:max-expr-width 80
                 ))
 
 (define (p obj)
@@ -122,8 +124,23 @@ Options:
 ")
   (exit 0))
 
-(define (dd obj)
+(define (ddd obj)
   (when debug? (pp obj)))
+
+(define-syntax dd
+  (syntax-rules ()
+    ((_ expr ...)
+     (when debug?
+       ;;(display "DEBUG [")
+       ;;(display (current-procedure-name))
+       ;;(display "] ")
+       (for-each
+        (lambda (name value)
+          (format #t "~a =\n" name)
+          (pp value))
+        '(expr ...)
+        (list expr ...))
+       (newline)))))
 
 (define (tt obj)
   (when test? (pp obj)))
@@ -166,3 +183,13 @@ Options:
     (if (null? lst) ret
         (loop (list-uniq-add ret (car lst))
               (cdr lst)))))
+
+(define (list-head1 lst)
+  (and lst
+       (not (null? lst))
+       (car lst)))
+
+(define (list-tail1 lst)
+  (and lst
+       (not (null? lst))
+       (list-ref lst (sub1 (length lst)))))
