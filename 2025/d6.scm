@@ -15,7 +15,7 @@
                       (string-tokenize (list-ref inputs (- len 1))))))
 
 (dd inputs)
-(dd ops)
+;;(dd ops)
 
 ;; Convert string to numbers
 (define numbers
@@ -57,7 +57,7 @@
 (define matrix-num (map (lambda (s)
                           (map char->digit (string->list s)))
                         inputs))
-(dd matrix)
+;;(dd matrix)
 (dd matrix-num)
 
 (define (num-at-col col)

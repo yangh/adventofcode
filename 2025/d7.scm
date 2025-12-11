@@ -16,8 +16,6 @@
 (define (matrix-set! lst row col val)
   (list-set! (list-ref lst row) col val))
 
-(tt (list "Uniq" (list-uniq '(3 4 5 3 4 5 1 1 1))))
-
 (define START   #\S)
 (define SPLITER #\^)
 (define BEAM    #\|)
