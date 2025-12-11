@@ -75,7 +75,7 @@
     ))
 
 (define numbers-sorted (sort numbers pos<?))
-(dd numbers-sorted)
+;;(dd numbers-sorted)
 
 ;;(dd (sort numbers pos-dist>?))
 
@@ -146,7 +146,7 @@
          (<= n y))
     ))
 
-(define (pos-on-the-green-line? p)
+(define (pos-on-the-green-line? p findx? findy?)
   (let* ((x (list-ref p 0))
          (y (list-ref p 1))
          (xid (num-hash-id-x p))
@@ -156,8 +156,8 @@
          )
     ;; TBD: add cache
     (let ((online (or
-                   (and xrange (range-has? xrange x))
-                   (and yrange (range-has? yrange y))
+                   (and findy? xrange (range-has? xrange x))
+                   (and findx? yrange (range-has? yrange y))
                    )))
       ;;(when online (dd p xrange yrange))
       online
@@ -186,31 +186,34 @@
 
 (dd global-xrange global-yrange)
 
-(define (find-x-line-on-dir x y dir)
+(define (find-x-line-on-dir x y dir xrange)
   (let loop ((x x))
-    (if (range-has? global-xrange x)
-        (if (pos-on-the-green-line? (list x y)) #t
+    (if (range-has? xrange x)
+        (if (pos-on-the-green-line? (list x y) #t #f) #t
             (loop (dir x)))
         #f)))
 
 (define (find-x-line x y)
   (and
-   (find-x-line-on-dir x y sub1)
-   (find-x-line-on-dir x y add1)
+   (find-x-line-on-dir x y sub1 (list (car global-xrange) x))
+   (find-x-line-on-dir x y add1 (list x (cadr global-xrange)))
    ))
 
-(define (find-y-line-on-dir x y dir)
+(define (find-y-line-on-dir x y dir yrange)
   (let loop ((y y))
-    (if (range-has? global-yrange y)
-        (if (pos-on-the-green-line? (list x y)) #t
+    (if (range-has? yrange y)
+        (if (pos-on-the-green-line? (list x y) #f #t) #t
             (loop (dir y)))
         #f)))
 
 (define (find-y-line x y)
   (and
-   (find-y-line-on-dir x y sub1)
-   (find-y-line-on-dir x y add1)
+   (find-y-line-on-dir x y sub1 (list (car global-yrange) y))
+   (find-y-line-on-dir x y add1 (list y (cadr global-yrange)))
    ))
+
+(use-modules (ice-9 threads))
+(use-modules (ice-9 futures))
 
 (define (pos-in-the-green-square? p)
   ;;(dd "pINgsqrt?" p)
@@ -219,14 +222,17 @@
          (nid (num-hash-id p))
          (green-cached (hash-ref num-green-hash nid)))
     (let ((found?
-           (or green-cached
-               (and
-                (find-x-line x y)
-                (find-y-line x y)))))
-      (when found?
-        (if (not green-cached)
-            (hash-set! num-green-hash nid 1)
-            (hash-set! num-green-hash nid (add1 green-cached))))
+           (or (and green-cached (cadr green-cached))
+               (every identity (par-map (lambda (proc)
+                                          (proc x y))
+                                        (list find-x-line
+                                              find-y-line)))
+               )))
+      ;;(pp (list "Find green" p green-cached found?))
+      (if (not green-cached)
+            (hash-set! num-green-hash nid (list 1 found?))
+            (hash-set! num-green-hash nid (list (add1 (car green-cached))
+                                                (cadr green-cached))))
       found?)
     ))
 
@@ -235,7 +241,7 @@
    ;; Known point
    (num-hash-ref (list x y))
    ;; Point in the middle of line (green)
-   (pos-on-the-green-line? (list x y))
+   ;;(pos-on-the-green-line? (list x y) #t #t)
    ;; Point in the green square?
    (pos-in-the-green-square? (list x y))
    ))
@@ -283,8 +289,9 @@
       (pos-is-valid? x1 y0))
      )))
 
-;; 93042 too low
+;; 93042, too low
+;; 4586713546, too high 1m36s solo
 (dd (find-max-sf numbers-sorted
                  rect-red-and-green?))
 
-(dd (hash-map->list cons num-green-hash))
+;;(dd (hash-map->list cons num-green-hash))
