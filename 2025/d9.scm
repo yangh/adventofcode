@@ -262,18 +262,6 @@
         (hashq-set! num-hash yid (list x x)))
     ))
 
-(for-each (lambda (p)
-            ;; x...y
-            (hashq-set! num-hash (num-hash-id p) p)
-            ;; x....
-            ;; ....y
-            (num-hash-xy-set! p)
-            )
-          numbers)
-
-;;(dd (hash-map->list cons num-hash))
-;;(dd (num-hash-ref '(11 1)))
-
 (define (rect-red-and-green? p1 p2)
   (let ((x0 (list-ref p1 0))
         (x1 (list-ref p2 0))
@@ -289,9 +277,86 @@
       (pos-is-valid? x1 y0))
      )))
 
+(for-each (lambda (p)
+            ;; x...y
+            (hashq-set! num-hash (num-hash-id p) p)
+            ;; x....
+            ;; ....y
+            (num-hash-xy-set! p)
+            )
+          numbers)
+
+(dd (hash-map->list cons num-hash))
+;;(dd (num-hash-ref '(11 1)))
+
 ;; 93042, too low
 ;; 4586713546, too high 1m36s solo
-(dd (find-max-sf numbers-sorted
-                 rect-red-and-green?))
+;;(dd (find-max-sf numbers-sorted rect-red-and-green?))
 
 ;;(dd (hash-map->list cons num-green-hash))
+
+(define (find-edges)
+  (let loop ((x (car global-xrange))
+              (lst '()))
+    (newline)
+    (pp (list x lst))
+    (let* ((xid (num-hash-id-x (list x 0)))
+           (yrange (num-hash-xy-ref xid))
+           (llen (length lst)))
+      (when (not yrange)
+        (pp (list "Not Found" xid)))
+      (pp (list "yrange" yrange "x" x))
+      (if (or
+           (= (length lst) (length numbers))
+           ;;(null? lst)
+           )
+          lst
+          (let* (
+                 (last-y
+                  (if (null? lst)
+                      (cadr yrange)
+                      (let* ((ly1 (cadr (list-ref lst (- llen 2))))
+                             (ly2 (cadr (list-ref lst (- llen 1))))
+                             (ny1 (car yrange))
+                             (ny2 (cadr yrange))
+                             )
+                        (if (or (= ny1 ly1)
+                                (= ny1 ly2))
+                            ny2
+                            ny1)
+                        )))
+                 (yid (num-hash-id-y
+                       (list 0 last-y)))
+                 (xrange (num-hash-xy-ref yid))
+                 )
+            (when (not xrange)
+              (pp (list "Not Found" xid)))
+            (pp (list "xrange" xrange "last-y" last-y))
+            (loop
+             (if (= last-y (car yrange))
+                 (car xrange)
+                 (cadr xrange)
+                 )
+             (append lst
+                     (if (null? lst)
+                         (list
+                          (list x (car yrange))
+                          (list x (cadr yrange)))
+                         (let* ((ly1 (cadr (list-ref lst (- llen 2))))
+                                (ly2 (cadr (list-ref lst (- llen 1))))
+                                (ny1 (car yrange))
+                                (ny2 (cadr yrange))
+                                )
+                           (if (= ly2 ny1)
+                               (list
+                                (list x (car yrange))
+                                (list x (cadr yrange)))
+                               (list
+                                (list x (cadr yrange))
+                                (list x (car yrange)))
+                               )))
+                     ))
+            )))
+    ))
+
+(dd (find-edges))
